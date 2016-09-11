@@ -16,3 +16,13 @@ public:
 	bool applyTo(Actor *actor);
 };
 
+class AiChangeEffect : public Effect
+{
+public:
+	TemporaryAi *newAi;
+	// message должно иметь %s для actor->name
+	const char *message;
+
+	AiChangeEffect(TemporaryAi *newAi, const char *message);
+	bool applyTo(Actor *actor);
+};

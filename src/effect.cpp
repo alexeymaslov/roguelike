@@ -32,3 +32,17 @@ bool HealthEffect::applyTo(Actor *actor)
 	}
 	return false;
 }
+
+AiChangeEffect::AiChangeEffect(TemporaryAi *newAi, const char *message) : newAi(newAi), 
+	message(message)
+{
+
+}
+
+bool AiChangeEffect::applyTo(Actor *actor)
+{
+	newAi->applyTo(actor);
+	if (message)
+		engine.gui->message(TCODColor::lightGrey, message, actor->name);
+	return true;
+}

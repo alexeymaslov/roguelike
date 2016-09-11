@@ -1,0 +1,10 @@
+game.sav
+include/*
+libtcod.so
+libtcod_debug.so
+libtcodxx.so
+libtcodxx_debug.so
+roguelike
+roguelike.sublime-project
+roguelike.sublime-workspace
+terminal.png

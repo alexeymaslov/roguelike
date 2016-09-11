@@ -5,7 +5,7 @@
 
 class Actor;
 
-class Equipment
+class Equipment : public Persistent
 {
 public:
 	enum Slot
@@ -24,8 +24,8 @@ public:
 	void dequip(Actor *owner);
 	Actor *getEquippedInSlot(Equipment::Slot slot, Actor *wearer);
 
-	void load(TCODZip &zip) {}
-	void save(TCODZip &zip) {}
+	void load(TCODZip &zip);
+	void save(TCODZip &zip);
 
 	static const char *getSlotAsChar(Slot slot);
 };

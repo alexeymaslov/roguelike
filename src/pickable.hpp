@@ -15,13 +15,13 @@ public:
 
 	static Pickable* create(TCODZip &zip);
 
-	void load(TCODZip &zip) {};
-	void save(TCODZip &zip) {};
+	void load(TCODZip &zip);
+	void save(TCODZip &zip);
 
 protected:
 	enum PickableType
 	{
-		HEALER, LIGHTNING_BOLT, FIREBALL, CONFUSER
+		HEALER, LIGHTNING_BOLT, FIREBALL, CONFUSER, PICKABLE
 	};
 };
 

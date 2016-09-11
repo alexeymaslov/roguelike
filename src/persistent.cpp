@@ -136,11 +136,13 @@ void Actor::save(TCODZip &zip)
 	zip.putInt(ai != NULL);
 	zip.putInt(pickable != NULL);
 	zip.putInt(container != NULL);
+	zip.putInt(equipment != NULL);
 	if (attacker) attacker->save(zip);
 	if (destructible) destructible->save(zip);
 	if (ai) ai->save(zip);
 	if (pickable) pickable->save(zip);
 	if (container) container->save(zip);
+	if (equipment) equipment->save(zip);
 }
 
 void Actor::load(TCODZip &zip)
@@ -156,6 +158,7 @@ void Actor::load(TCODZip &zip)
 	bool hasAi = zip.getInt();
 	bool hasPickable = zip.getInt();
 	bool hasContainer = zip.getInt();
+	bool hasEquipment = zip.getInt();
 	if (hasAttacker)
 	{
 		attacker = new Attacker(0.0f);
@@ -171,6 +174,11 @@ void Actor::load(TCODZip &zip)
 	{
 		container = new Container(0);
 		container->load(zip);
+	}
+	if (hasEquipment)
+	{
+		equipment = new Equipment(Equipment::RIGHT_HAND);
+		equipment->load(zip);
 	}
 }
 
@@ -263,6 +271,16 @@ void Healer::load(TCODZip &zip)
 	amount = zip.getFloat();
 }
 
+void Pickable::save(TCODZip &zip)
+{
+	zip.putInt(PICKABLE);
+}
+
+void Pickable::load(TCODZip &zip)
+{
+
+}
+
 void LightningBolt::save(TCODZip &zip)
 {
 	zip.putInt(LIGHTNING_BOLT);
@@ -313,6 +331,9 @@ Pickable *Pickable::create(TCODZip &zip)
 		break;
 		case CONFUSER:
 			pickable = new Confuser(0, 0);
+		break;
+		case PICKABLE:
+			pickable = new Pickable();
 		break;
 	}
 	pickable->load(zip);
@@ -371,4 +392,22 @@ Ai *Ai::create(TCODZip &zip)
 	}
 	ai->load(zip);
 	return ai;
+}
+
+void Equipment::save(TCODZip &zip)
+{
+	zip.putInt(slot);
+	zip.putInt(equipped);
+	zip.putFloat(powerBonus);
+	zip.putFloat(defenseBonus);
+	zip.putFloat(hpBonus);
+}
+
+void Equipment::load(TCODZip &zip)
+{
+	slot = (Slot) zip.getInt();
+	equipped = zip.getInt();
+	powerBonus = zip.getFloat();
+	defenseBonus = zip.getFloat();
+	hpBonus = zip.getFloat();
 }

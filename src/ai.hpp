@@ -53,11 +53,12 @@ protected:
 	void moveOrAttack(Actor *owner, int targetx, int targety);
 };
 
-class ConfusedMonsterAi : public Ai
+class TemporaryAi : public Ai
 {
 public:
-	ConfusedMonsterAi(int nbTurns, Ai *oldAi);
+	TemporaryAi(int nbTurns);
 	void update(Actor *owner);
+	void applyTo(Actor *actor);
 
 	void save(TCODZip &zip);
 	void load(TCODZip &zip);
@@ -65,4 +66,14 @@ public:
 protected:
 	int nbTurns;
 	Ai *oldAi;
+};
+
+class ConfusedMonsterAi : public TemporaryAi
+{
+public:
+	ConfusedMonsterAi(int nbTurns);
+	void update(Actor *owner);
+	// TODO move to tempAi class
+	void save(TCODZip &zip);
+	void load(TCODZip &zip);
 };

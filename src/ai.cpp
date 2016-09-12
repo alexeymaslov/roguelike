@@ -317,7 +317,7 @@ void MonsterAi::moveOrAttack(Actor *owner, int targetx, int targety)
 	}
 }
 
-TemporaryAi::TemporaryAi(int nbTurns) : nbTurns(nbTurns)
+TemporaryAi::TemporaryAi(int nbTurns) : nbTurns(nbTurns), oldAi(NULL)
 {
 
 }

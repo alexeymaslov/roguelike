@@ -169,7 +169,10 @@ void Actor::load(TCODZip &zip)
 	if (hasAi)
 		ai = Ai::create(zip);
 	if (hasPickable)
-		pickable = Pickable::create(zip);
+	{
+		pickable = new Pickable(NULL, NULL);
+		pickable->load(zip);
+	}
 	if (hasContainer)
 	{
 		container = new Container(0);
@@ -260,86 +263,6 @@ Destructible *Destructible::create(TCODZip &zip)
 	return destructible;
 }
 
-void Healer::save(TCODZip &zip)
-{
-	zip.putInt(HEALER);
-	zip.putFloat(amount);
-}
-
-void Healer::load(TCODZip &zip)
-{
-	amount = zip.getFloat();
-}
-
-void Pickable::save(TCODZip &zip)
-{
-	zip.putInt(PICKABLE);
-}
-
-void Pickable::load(TCODZip &zip)
-{
-
-}
-
-void LightningBolt::save(TCODZip &zip)
-{
-	zip.putInt(LIGHTNING_BOLT);
-	zip.putFloat(range);
-	zip.putFloat(damage);
-}
-
-void LightningBolt::load(TCODZip &zip)
-{
-	range = zip.getFloat();
-	damage = zip.getFloat();
-}
-
-void Confuser::save(TCODZip &zip)
-{
-	zip.putInt(CONFUSER);
-	zip.putInt(nbTurns);
-	zip.putFloat(range);
-}
-
-void Confuser::load(TCODZip &zip)
-{
-	nbTurns = zip.getInt();
-	range = zip.getFloat();
-}
-
-void Fireball::save(TCODZip &zip)
-{
-	zip.putInt(FIREBALL);
-	zip.putFloat(range);
-	zip.putFloat(damage);   
-}
-
-Pickable *Pickable::create(TCODZip &zip)
-{
-	PickableType type = (PickableType) zip.getInt();
-	Pickable *pickable = NULL;
-	switch (type)
-	{
-		case HEALER:
-			pickable = new Healer(0);
-		break;
-		case LIGHTNING_BOLT:
-			pickable = new LightningBolt(0, 0);
-		break;
-		case FIREBALL:
-			pickable = new Fireball(0, 0);
-		break;
-		case CONFUSER:
-			pickable = new Confuser(0, 0);
-		break;
-		case PICKABLE:
-			pickable = new Pickable();
-		break;
-	}
-	pickable->load(zip);
-	return pickable;
-}
-
 void MonsterAi::save(TCODZip &zip)
 {
 	zip.putInt(MONSTER);
@@ -349,19 +272,6 @@ void MonsterAi::load(TCODZip &zip)
 {
 	
 }
-
-void ConfusedMonsterAi::save(TCODZip &zip)
-{
-	zip.putInt(CONFUSED_MONSTER);
-	zip.putInt(nbTurns);
-	oldAi->save(zip);
-}
-
-void ConfusedMonsterAi::load(TCODZip &zip)
-{
-	nbTurns = zip.getInt();
-	oldAi = Ai::create(zip);
-} 
 
 void PlayerAi::save(TCODZip &zip)
 {
@@ -386,12 +296,55 @@ Ai *Ai::create(TCODZip &zip)
 		case MONSTER: 
 			ai = new MonsterAi();
 		break;
+		case TEMPORARY_AI:
+		{
+			ai = TemporaryAi::create(zip);
+			return ai;
+		}
+		break;
+	}
+	ai->load(zip);
+	return ai;
+}
+
+TemporaryAi *TemporaryAi::create(TCODZip &zip)
+{
+	TemporaryAiType type = (TemporaryAiType) zip.getInt();
+	TemporaryAi *ai = NULL;
+	switch (type)
+	{
 		case CONFUSED_MONSTER:
 			ai = new ConfusedMonsterAi(0);
 		break;
 	}
 	ai->load(zip);
 	return ai;
+}
+
+void ConfusedMonsterAi::save(TCODZip &zip)
+{
+	zip.putInt(CONFUSED_MONSTER);
+	TemporaryAi::save(zip);
+}
+
+void TemporaryAi::save(TCODZip &zip)
+{
+	zip.putInt(nbTurns);
+	zip.putInt(oldAi != NULL);
+	if (oldAi) oldAi->save(zip);
+}
+
+void TemporaryAi::load(TCODZip &zip)
+{
+	nbTurns = zip.getInt();
+	bool hasOldAi = zip.getInt();
+	if (hasOldAi)
+		oldAi = Ai::create(zip);
+}
+
+void ConfusedMonsterAi::load(TCODZip &zip)
+{
+	TemporaryAi::load(zip);
 }
 
 void Equipment::save(TCODZip &zip)
@@ -410,4 +363,83 @@ void Equipment::load(TCODZip &zip)
 	powerBonus = zip.getFloat();
 	defenseBonus = zip.getFloat();
 	hpBonus = zip.getFloat();
+}
+
+void Pickable::save(TCODZip &zip)
+{
+	zip.putInt(selector != NULL);
+	zip.putInt(effect != NULL);
+	if (selector) selector->save(zip);
+	if (effect) effect->save(zip);
+}
+
+void Pickable::load(TCODZip &zip)
+{
+	bool hasSelector = zip.getInt();
+	bool hasEffect = zip.getInt();
+	if (hasSelector)
+	{
+		selector = new TargetSelector(TargetSelector::CLOSEST_MONSTER, 0);
+		selector->load(zip);
+	}
+	if (hasEffect)
+		effect = Effect::create(zip);
+}
+
+void TargetSelector::save(TCODZip &zip)
+{
+	zip.putInt(type);
+	zip.putFloat(range);
+}
+
+void TargetSelector::load(TCODZip &zip)
+{
+	type = (SelectorType) zip.getInt();
+	range = zip.getFloat();
+}
+
+Effect *Effect::create(TCODZip &zip)
+{
+	EffectType type = (EffectType) zip.getInt();
+	Effect *effect = NULL;
+	switch (type)
+	{
+		case HEALTH:
+			effect = new HealthEffect(0, NULL);
+		break;
+		case AI_CHANGE:
+			effect = new AiChangeEffect(NULL, NULL);
+		break;
+	}
+	effect->load(zip);
+	return effect;
+}
+
+void HealthEffect::save(TCODZip &zip)
+{
+	zip.putInt(HEALTH);
+	zip.putFloat(amount);
+	zip.putString(message);
+}
+
+void HealthEffect::load(TCODZip &zip)
+{
+	amount = zip.getFloat();
+	message = strdup(zip.getString());
+}
+
+void AiChangeEffect::save(TCODZip &zip)
+{
+	zip.putInt(AI_CHANGE);
+	zip.putString(message);
+	zip.putInt(newAi != NULL);
+	if (newAi) newAi->save(zip);
+}
+
+void AiChangeEffect::load(TCODZip &zip)
+{
+	message = strdup(zip.getString());
+	bool hasNewAi = zip.getInt();
+	if (hasNewAi)
+		newAi = TemporaryAi::create(zip);
 }

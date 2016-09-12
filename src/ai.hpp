@@ -17,7 +17,7 @@ public:
 protected:
 	enum AiType
 	{
-		MONSTER, CONFUSED_MONSTER, PLAYER
+		MONSTER, TEMPORARY_AI, PLAYER
 	};
 };
 
@@ -60,12 +60,18 @@ public:
 	void update(Actor *owner);
 	void applyTo(Actor *actor);
 
-	void save(TCODZip &zip) {};
-	void load(TCODZip &zip) {};
+	static TemporaryAi *create(TCODZip &zip);
+	void save(TCODZip &zip);
+	void load(TCODZip &zip);
 
 protected:
 	int nbTurns;
 	Ai *oldAi;
+
+	enum TemporaryAiType
+	{
+		CONFUSED_MONSTER
+	};
 };
 
 class ConfusedMonsterAi : public TemporaryAi
@@ -73,7 +79,7 @@ class ConfusedMonsterAi : public TemporaryAi
 public:
 	ConfusedMonsterAi(int nbTurns);
 	void update(Actor *owner);
-	// TODO move to tempAi class
+
 	void save(TCODZip &zip);
 	void load(TCODZip &zip);
 };

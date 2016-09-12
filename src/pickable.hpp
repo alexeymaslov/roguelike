@@ -1,13 +1,16 @@
 #pragma once
 
 #include "persistent.hpp"
+#include "targetselector.hpp"
+#include "effect.hpp"
 
 class Actor;
 
 class Pickable : public Persistent
 {
 public:
-	virtual ~Pickable() {};
+	Pickable(TargetSelector *selector = NULL, Effect *effect = NULL);
+	virtual ~Pickable();
 
 	bool pick(Actor *owner, Actor *wearer);
 	void drop(Actor *owner, Actor *wearer);
@@ -23,6 +26,9 @@ protected:
 	{
 		HEALER, LIGHTNING_BOLT, FIREBALL, CONFUSER, PICKABLE
 	};
+	// если NULL то цель - wearer
+	TargetSelector *selector;
+	Effect *effect;
 };
 
 class Healer : public Pickable

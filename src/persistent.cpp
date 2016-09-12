@@ -387,7 +387,7 @@ Ai *Ai::create(TCODZip &zip)
 			ai = new MonsterAi();
 		break;
 		case CONFUSED_MONSTER:
-			ai = new ConfusedMonsterAi(0, NULL);
+			ai = new ConfusedMonsterAi(0);
 		break;
 	}
 	ai->load(zip);

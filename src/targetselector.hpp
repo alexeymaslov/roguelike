@@ -1,3 +1,5 @@
+#pragma once
+
 #include "libtcod.hpp"
 
 class Actor;

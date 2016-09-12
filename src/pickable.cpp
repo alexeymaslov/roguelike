@@ -3,6 +3,18 @@
 #include "actor.hpp"
 #include "engine.hpp"
 
+Pickable::Pickable(TargetSelector *selector,  Effect *effect) :
+	selector(selector), effect(effect)
+{
+
+}
+
+Pickable::~Pickable()
+{
+	if (selector) delete selector;
+	if (effect) delete effect;
+}
+
 bool Pickable::pick(Actor *owner, Actor *wearer)
 {
 	if (wearer->container && wearer->container->add(owner))
@@ -40,13 +52,24 @@ bool Pickable::use(Actor *owner, Actor *wearer)
 		return true;
 	}
 	
-	if (wearer->container)
-	{
-		wearer->container->remove(owner);
-		delete owner;
-		return true;
-	}
-	return false;
+	TCODList<Actor *> list;
+	if (selector)
+		selector->selectTargets(wearer, list);
+	else
+		list.push(wearer);
+	bool succeed = false;
+	for (Actor **i = list.begin(); i != list.end(); ++i)
+		if (effect->applyTo(*i))
+			succeed = true;
+
+
+	if (succeed)
+		if (wearer->container)
+		{
+			wearer->container->remove(owner);
+			delete owner;
+		}
+	return succeed;
 }
 
 Healer::Healer(float amount) : amount(amount)
@@ -132,7 +155,7 @@ bool Confuser::use(Actor *owner, Actor *wearer)
 	if (!actor)
 		return false;
 
-	Ai *confusedAi = new ConfusedMonsterAi(nbTurns, actor->ai);
+	Ai *confusedAi = new ConfusedMonsterAi(nbTurns);
 	actor->ai = confusedAi;
 
 	engine.gui->message(TCODColor::lightGreen,

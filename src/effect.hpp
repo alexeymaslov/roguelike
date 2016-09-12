@@ -1,3 +1,7 @@
+#pragma once
+
+class TemporaryAi;
+
 class Actor;
 
 class Effect

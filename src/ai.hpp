@@ -60,8 +60,8 @@ public:
 	void update(Actor *owner);
 	void applyTo(Actor *actor);
 
-	void save(TCODZip &zip);
-	void load(TCODZip &zip);
+	void save(TCODZip &zip) {};
+	void load(TCODZip &zip) {};
 
 protected:
 	int nbTurns;

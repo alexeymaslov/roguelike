@@ -303,7 +303,8 @@ void Map::addItem(int x, int y)
 			Actor *healthPotion = new Actor(x, y, '!', "health potion",
 				TCODColor::violet);
 			healthPotion->blocks = false;
-			healthPotion->pickable = new Healer(4);
+			healthPotion->pickable = new Pickable(NULL, 
+				new HealthEffect(4, "%s is healed for %g health"));
 			engine.actors.push(healthPotion);
 		}
 		break;
@@ -312,7 +313,10 @@ void Map::addItem(int x, int y)
 			Actor *scrollOfLightningBolt = new Actor(x, y, '#', "scroll of lightning bolt",
 				TCODColor::lightYellow);
 			scrollOfLightningBolt->blocks = false;
-			scrollOfLightningBolt->pickable = new LightningBolt(5, 20);
+			scrollOfLightningBolt->pickable = new Pickable(
+				new TargetSelector(TargetSelector::CLOSEST_MONSTER, 5), 
+				new HealthEffect(-20, "A lighting bolt strikes the %s with a loud thunder!\n"
+				"The damage is %g hit points."));
 			engine.actors.push(scrollOfLightningBolt);
 		}
 		break;
@@ -321,7 +325,9 @@ void Map::addItem(int x, int y)
 			Actor *scrollOfFireball = new Actor(x, y, '#', "scroll of fireball",
 				TCODColor::lightYellow);
 			scrollOfFireball->blocks = false;
-			scrollOfFireball->pickable = new Fireball(3, 12);
+			scrollOfFireball->pickable = new Pickable(
+				new TargetSelector(TargetSelector::SELECTED_RANGE, 3), 
+				new HealthEffect(-12, "The %s gets burned for %g hit points."));
 			engine.actors.push(scrollOfFireball);
 		}
 		break;
@@ -330,7 +336,10 @@ void Map::addItem(int x, int y)
 			Actor *scrollOfConfusion = new Actor(x, y, '#', "scroll of confusion",
 				TCODColor::lightYellow);
 			scrollOfConfusion->blocks = false;
-			scrollOfConfusion->pickable = new Confuser(10, 8);
+			scrollOfConfusion->pickable = new Pickable(
+				new TargetSelector(TargetSelector::SELECTED_MONSTER, 5), 
+				new AiChangeEffect(new ConfusedMonsterAi(10), 
+					"The eyes of the %s look vacant,\nas he starts to stumble around!"));
 			engine.actors.push(scrollOfConfusion);
 		}
 		break;

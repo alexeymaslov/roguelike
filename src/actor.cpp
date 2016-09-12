@@ -1,6 +1,7 @@
 #include "math.h"
 
 #include "actor.hpp"
+#include "engine.hpp"
 
 
 Actor::Actor(int x, int y, int ch, const char *name, const TCODColor &col) :
@@ -23,8 +24,14 @@ Actor::~Actor()
 
 void Actor::render() const
 {
-	TCODConsole::root->setChar(x,y,ch);
-	TCODConsole::root->setCharForeground(x,y,col);
+	int cx;
+	int cy;
+	engine.toCameraCoords(x, y, cx, cy);
+	if (cx != -1)
+	{
+		TCODConsole::root->setChar(cx, cy, ch);
+		TCODConsole::root->setCharForeground(cx, cy, col);
+	}
 }
 
 void Actor::update()

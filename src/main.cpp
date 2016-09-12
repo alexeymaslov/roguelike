@@ -2,8 +2,8 @@
 
 #include "engine.hpp"
 
-
-Engine engine(80, 50);
+// TODO убрать эти параметры в параметры main
+Engine engine(80, 50, 100, 100);
 
 int main()
 {

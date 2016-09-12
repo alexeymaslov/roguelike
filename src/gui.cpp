@@ -80,7 +80,7 @@ void Gui::renderBar(int x, int y, int width, const char *name,
 
 }
 
-// Мб потом переписать используя вместо strdup и free  с++ и delete
+// TODO Мб потом переписать используя вместо strdup и free  с++ и delete
 Gui::Message::Message(const char *text, const TCODColor &col) : text(strdup(text)), col(col)
 {
 
@@ -91,6 +91,7 @@ Gui::Message::~Message()
 	free(text);
 }
 
+// TODO переписать используя iostream
 void Gui::message(const TCODColor &col, const char *text, ...)
 {
 	va_list ap;
@@ -124,8 +125,11 @@ void Gui::message(const TCODColor &col, const char *text, ...)
 
 void Gui::renderMouseLook()
 {
-	if (engine.mouse.cy >= engine.map->height ||
-		!engine.map->isInFov(engine.mouse.cx, engine.mouse.cy))
+	int mapx = engine.mouse.cx + engine.camerax;
+	int mapy = engine.mouse.cy + engine.cameray;
+
+	if (engine.mouse.cy >= engine.cameraHeight ||
+		!engine.map->isInFov(mapx, mapy))
 		return;
 
 	char buf[128] = "";
@@ -133,7 +137,7 @@ void Gui::renderMouseLook()
 	for (Actor **it = engine.actors.begin(); it != engine.actors.end(); ++it)
 	{
 		Actor *actor = *it;
-		if (actor->x == engine.mouse.cx && actor->y == engine.mouse.cy)
+		if (actor->x == mapx && actor->y == mapy)
 		{
 			if (!first)
 				strcat(buf, ", ");

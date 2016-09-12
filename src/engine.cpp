@@ -2,9 +2,17 @@
 
 #include "engine.hpp"
 
-Engine::Engine(int screenWidth, int screenHeight) : gameStatus(STARTUP),
-	player(NULL), map(NULL), fovRadius(10), level(1),
-	screenWidth(screenWidth), screenHeight(screenHeight)
+Engine::Engine(int screenWidth, int screenHeight) :
+	Engine(screenWidth, screenHeight, screenWidth, screenHeight - PANEL_HEIGHT)
+{
+
+}
+
+Engine::Engine(int screenWidth, int screenHeight, int mapWidth, int mapHeight) : 
+	gameStatus(STARTUP), player(NULL), map(NULL), fovRadius(10), 
+	level(1), screenWidth(screenWidth), screenHeight(screenHeight),
+	cameraWidth(screenWidth), cameraHeight(screenHeight - PANEL_HEIGHT),
+	mapWidth(mapWidth), mapHeight(mapHeight)
 {
 	TCODConsole::initRoot(screenWidth, screenHeight, "libtcod C++ tutorial", false);
 	gui = new Gui();
@@ -33,7 +41,7 @@ void Engine::init()
 	stairs->fovOnly = false;
 	actors.push(stairs);
 
-	map = new Map(screenWidth, screenHeight - PANEL_HEIGHT);
+	map = new Map(mapWidth, mapHeight);
 	map->init(true);
 	gui->message(TCODColor::red, 
 		"Welcome stranger!\nPrepare to perish in the Tombs of the Ancient Kings.");
@@ -79,6 +87,8 @@ void Engine::update()
 
 void Engine::render()
 {
+	moveCamera(player->x, player->y);
+
 	TCODConsole::root->clear();
 	// draw the map
 	map->render();
@@ -139,18 +149,20 @@ bool Engine::pickATile(int &x, int &y, float radius, float maxRange)
 				}
 
 		TCODSystem::checkForEvent(TCOD_EVENT_KEY_PRESS|TCOD_EVENT_MOUSE,&lastKey,&mouse);
-		if (mouse.cy < map->height && map->isInFov(mouse.cx, mouse.cy)
-			&& (maxRange == 0 || player->getDistance(mouse.cx, mouse.cy) <= maxRange))
+		int mapx = mouse.cx + camerax;
+		int mapy = mouse.cy + cameray;
+		if (mouse.cy < engine.cameraHeight && map->isInFov(mapx, mapy)
+			&& (maxRange == 0 || player->getDistance(mapx, mapy) <= maxRange))
 		{
 			for (int cx = 0; cx < map->width; ++cx)
 				for (int cy = 0; cy < map->height; ++cy)
-					if (getDistance(mouse.cx, mouse.cy, cx, cy) <= radius)
+					if (getDistance(mapx, mapy, cx, cy) <= radius)
 						TCODConsole::root->setCharBackground(cx, cy, TCODColor::white);
 
 			if (mouse.lbutton_pressed)
 			{
-				x = mouse.cx;
-				y = mouse.cy;
+				x = mapx;
+				y = mapy;
 				return true;
 			}
 		}
@@ -194,7 +206,34 @@ void Engine::nextLevel()
 			i = actors.remove(i);
 		}
 
-	map = new Map(screenWidth, screenHeight - PANEL_HEIGHT);
+	map = new Map(mapWidth, mapHeight);
 	map->init(true);
 	gameStatus = STARTUP;
+}
+
+void Engine::moveCamera(int x, int y)
+{
+	// новые координаты левого верхнего угла
+	int cx = x - cameraWidth / 2;
+	int cy = y - cameraHeight / 2;
+
+	if (cx > map->width - cameraWidth) cx = map->width - cameraWidth;
+	if (cy > map->height - cameraHeight) cy = map->height - cameraHeight;
+	if (cx < 0) cx = 0;
+	if (cy < 0) cy = 0;
+
+	camerax = cx;
+	cameray = cy;
+}
+
+
+void Engine::toCameraCoords(int x, int y, int &rx, int &ry)
+{
+	rx = x - camerax;
+	ry = y - cameray;
+	if (rx < 0 || ry < 0 || rx >= cameraWidth || ry >= cameraHeight)
+	{
+		rx = -1;
+		ry = -1;
+	}
 }

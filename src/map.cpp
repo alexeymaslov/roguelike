@@ -141,13 +141,15 @@ void Map::render() const
 	static const TCODColor darkGround(50, 50, 150);
 	static const TCODColor lightWall(130,110,50);
 	static const TCODColor lightGround(200,180,50);
-	for (int x = 0; x < width; ++x)
-		for (int y = 0; y < height; ++y)
+	for (int x = 0; x < engine.cameraWidth; ++x)
+		for (int y = 0; y < engine.cameraHeight; ++y)
 		{
-			if (isInFov(x, y))
-				TCODConsole::root->setCharBackground(x, y, isWall(x, y) ? lightWall : lightGround);
-			else if (isExplored(x, y))
-				TCODConsole::root->setCharBackground(x, y, isWall(x, y) ? darkWall : darkGround);
+			int mapx = x + engine.camerax;
+			int mapy = y + engine.cameray;
+			if (isInFov(mapx, mapy))
+				TCODConsole::root->setCharBackground(x, y, isWall(mapx, mapy) ? lightWall : lightGround);
+			else if (isExplored(mapx, mapy))
+				TCODConsole::root->setCharBackground(x, y, isWall(mapx, mapy) ? darkWall : darkGround);
 		}
 
 	// show scent value 

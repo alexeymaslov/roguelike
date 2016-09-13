@@ -35,6 +35,8 @@ public :
 
 	unsigned int currentScentValue;
 	unsigned int getScent(int x, int y) const;
+
+	const TCODMap *getMap() const { return map; }
 	
 	void init(bool withActors);
 

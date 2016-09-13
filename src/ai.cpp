@@ -256,65 +256,95 @@ void MonsterAi::update(Actor *owner)
 	if (owner->destructible && owner->destructible->isDead())
 		return;
 
-	moveOrAttack(owner, engine.player->x, engine.player->y);
+	moveOrAttack(owner, engine.player);
 }
 
-void MonsterAi::moveOrAttack(Actor *owner, int targetx, int targety)
+void MonsterAi::moveOrAttack(Actor *owner, Actor *target)
+{
+	if (engine.map->isInFov(owner->x, owner->y))
+	{
+		if (owner->getDistance(target->x, target->y) >= 2)
+			moveToTarget(owner, target);
+		else // атакуем в ближнем бою
+			if (owner->attacker && target->destructible && !target->destructible->isDead())
+				owner->attacker->attack(owner, target);
+		return;
+	}
+	else if (target == engine.player) // игрок невидим, используем запах
+	{
+		unsigned int bestLevel = 0;
+		int bestCellIndex = -1;
+		static int tdx[8] = {-1, 0, 1, -1, 1, -1, 0, 1};
+		static int tdy[8] = {-1, -1, -1, 0, 0, 1, 1, 1}; 
+		for (int i = 0; i < 8; ++i)
+		{
+			int cellx = owner->x + tdx[i];
+			int celly = owner->y + tdy[i];
+			if (engine.map->canWalk(cellx, celly))
+			{
+				unsigned int cellScent = engine.map->getScent(cellx, celly);
+				if (cellScent > engine.map->currentScentValue - SCENT_THRESHOLD
+					&& cellScent > bestLevel)
+				{
+					bestLevel = cellScent;
+					bestCellIndex = i;
+				}
+			}
+		}
+		if (bestCellIndex != -1)
+		{
+			owner->x += tdx[bestCellIndex];
+			owner->y += tdy[bestCellIndex];
+		}
+	}
+}
+
+void MonsterAi::moveToTarget(Actor *owner, Actor *target)
+{
+	TCODMap pathMap(engine.map->width, engine.map->height);
+	pathMap.copy(engine.map->getMap());
+	for (Actor **i = engine.actors.begin(); i != engine.actors.end(); ++i)
+	{
+		Actor *actor = *i;
+		if (actor->blocks && actor != owner && actor != target)
+			pathMap.setProperties(actor->x, actor->y, true, false);
+	}
+	// 1.0f - цена пути по диагонали
+	TCODPath path(&pathMap, 1.0f);
+	path.compute(owner->x, owner->y, target->x, target->y);
+	if (!path.isEmpty())
+	{
+		int x;
+		int y;
+		bool walkable = path.walk(&x, &y, true);
+		if (walkable)
+		{
+			owner->x = x;
+			owner->y = y;	
+		}
+	}
+	else // используем старый метод
+		moveToCoords(owner, target->x, target->y);
+}
+
+void MonsterAi::moveToCoords(Actor *owner, int targetx, int targety)
 {
 	int dx = targetx - owner->x;
 	int dy = targety - owner->y;
 	int stepdx = (dx > 0 ? 1 : -1);
 	int stepdy = (dy > 0 ? 1 : -1);
 	float distance = sqrtf(dx * dx + dy * dy);
-	if (distance < 2)
+	dx = (int)(round(dx / distance));
+	dy = (int)(round(dy / distance));
+	if (engine.map->canWalk(owner->x + dx, owner->y + dy))
 	{
-		// атакуем в ближнем бою
-		if (owner->attacker)
-			owner->attacker->attack(owner, engine.player);
-		return;
+		owner->x += dx;
+		owner->y += dy;
 	}
-	else if (engine.map->isInFov(owner->x, owner->y))
-	{
-		dx = (int)(round(dx / distance));
-		dy = (int)(round(dy / distance));
-		if (engine.map->canWalk(owner->x + dx, owner->y + dy))
-		{
-			owner->x += dx;
-			owner->y += dy;
-		}
-		else if (engine.map->canWalk(owner->x + stepdx, owner->y))
-			owner->x += stepdx;
-		else if (engine.map->canWalk(owner->x, owner->y + stepdy))
-			owner->y += stepdy;
-
-		return;
-	}
-	
-	// игрок невидим, используем запах
-	unsigned int bestLevel = 0;
-	int bestCellIndex = -1;
-	static int tdx[8] = {-1, 0, 1, -1, 1, -1, 0, 1};
-	static int tdy[8] = {-1, -1, -1, 0, 0, 1, 1, 1}; 
-	for (int i = 0; i < 8; ++i)
-	{
-		int cellx = owner->x + tdx[i];
-		int celly = owner->y + tdy[i];
-		if (engine.map->canWalk(cellx, celly))
-		{
-			unsigned int cellScent = engine.map->getScent(cellx, celly);
-			if (cellScent > engine.map->currentScentValue - SCENT_THRESHOLD
-				&& cellScent > bestLevel)
-			{
-				bestLevel = cellScent;
-				bestCellIndex = i;
-			}
-		}
-	}
-	if (bestCellIndex != -1)
-	{
-		owner->x += tdx[bestCellIndex];
-		owner->y += tdy[bestCellIndex];
-	}
+	else if (engine.map->canWalk(owner->x + stepdx, owner->y))
+		owner->x += stepdx;
+	else if (engine.map->canWalk(owner->x, owner->y + stepdy))
+		owner->y += stepdy;
 }
 
 TemporaryAi::TemporaryAi(int nbTurns) : nbTurns(nbTurns), oldAi(NULL)

@@ -50,7 +50,12 @@ public:
 	void load(TCODZip &zip);
 
 protected:
-	void moveOrAttack(Actor *owner, int targetx, int targety);
+	void moveOrAttack(Actor *owner, Actor *target);
+
+	// Использует pathfinding
+	void moveToTarget(Actor *owner, Actor *target);
+	// Старая модель поиска пути
+	void moveToCoords(Actor *owner, int targetx, int targety);
 };
 
 class TemporaryAi : public Ai

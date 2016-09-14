@@ -87,4 +87,6 @@ protected :
 	bool floodFill();
 	void fill(int x, int y, bool *wall);
 	float calcPercentOfWalls() const;
+	// TODO объединить с createRoom (в ней тоже создаются итемы и монстры)
+	void populateCaves();
 };

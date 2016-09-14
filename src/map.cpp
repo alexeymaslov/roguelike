@@ -394,26 +394,31 @@ void Map::cellularAutomataGeneration(bool withActors)
 			makeCaverns(4, -2);
 	} while (!floodFill());
 
-	int x;
-	int y;
-	TCODRandom *rng = TCODRandom::getInstance();
-	do
+	if (withActors)
 	{
-		x = rng->getInt(1, width);
-		y = rng->getInt(1, height);
-	}
-	while (!map->isWalkable(x, y));
-	engine.player->x = x;
-	engine.player->y = y;
+		int x;
+		int y;
+		TCODRandom *rng = TCODRandom::getInstance();
+		do
+		{
+			x = rng->getInt(1, width);
+			y = rng->getInt(1, height);
+		}
+		while (!map->isWalkable(x, y));
+		engine.player->x = x;
+		engine.player->y = y;
 
-	do
-	{
-		x = rng->getInt(1, width);
-		y = rng->getInt(1, height);
+		do
+		{
+			x = rng->getInt(1, width);
+			y = rng->getInt(1, height);
+		}
+		while (!map->isWalkable(x, y));
+		engine.stairs->x = x;
+		engine.stairs->y = y;
+
+		populateCaves();
 	}
-	while (!map->isWalkable(x, y));
-	engine.stairs->x = x;
-	engine.stairs->y = y;
 }
 
 void Map::randomFillMap()
@@ -541,4 +546,47 @@ float Map::calcPercentOfWalls() const
 			if (!map->isWalkable(x, y))
 				++nbWalls;
 	return ((float)nbWalls) / nbCells;
+}
+
+void Map::populateCaves()
+{
+	float averageRoomLength = ((float)(ROOM_MAX_SIZE + ROOM_MIN_SIZE) / 2) * 2 / 3;
+	float averageRoomSquare =  averageRoomLength * averageRoomLength;
+	// Сколько примерно комнат было бы сгенерировано с помощью bsp генерации
+	int nbRooms = (int) (width * height / averageRoomSquare) - 1;
+	int stepx = (int) width / averageRoomLength;
+	int stepy = (int) height / averageRoomLength;
+	int x = 0;
+	int y = 0;
+
+	while (nbRooms)
+	{
+		TCODRandom *rng = TCODRandom::getInstance();
+		int nbMonsters = rng->getInt(0, maxAmountRoomMonsters);
+		while (nbMonsters > 0)
+		{
+			int cx = rng->getInt(x, x + stepx);
+			int cy = rng->getInt(y, y + stepy);
+			if (canWalk(cx, cy))
+				addMonster(cx, cy);
+			--nbMonsters;
+		}
+
+		int nbItems = rng->getInt(0, maxAmountRoomItems);
+		while (nbItems > 0)
+		{
+			int cx = rng->getInt(x, x + stepx);
+			int cy = rng->getInt(y, y + stepy);
+			if (canWalk(cx, cy))
+				addItem(cx, cy);
+			--nbItems;
+		}
+		--nbRooms;
+		x += stepx;
+		if (x >= width)
+		{
+			x -= width;
+			y += stepy;
+		}
+	}
 }

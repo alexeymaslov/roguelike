@@ -189,6 +189,8 @@ Menu::MenuItemCode Menu::pick(DisplayMode mode)
 	else
 	{
 		// TODO add some background for menu
+		TCODConsole::root->setDefaultBackground(TCODColor::black);
+		TCODConsole::root->clear();
 		menux = 10;
 		menuy = TCODConsole::root->getHeight() / 3;
 	}

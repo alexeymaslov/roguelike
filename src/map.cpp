@@ -158,22 +158,26 @@ void Map::render() const
 			int mapy = y + engine.cameray;
 			if (isInFov(mapx, mapy))
 				TCODConsole::root->setCharBackground(x, y, isWall(mapx, mapy) ? lightWall : lightGround);
-			else //if (isExplored(mapx, mapy))
+			else if (isExplored(mapx, mapy))
 				TCODConsole::root->setCharBackground(x, y, isWall(mapx, mapy) ? darkWall : darkGround);
 		}
 
 	// show scent value 
-	/*for (int x = 0; x < width; ++x)
-		for (int y = 0; y < height; ++y)
+	/*for (int x = 0; x < engine.cameraWidth; ++x)
+		for (int y = 0; y < engine.cameraHeight; ++y)
 		{
 			int scent = SCENT_THRESHOLD - (currentScentValue - getScent(x, y));
 			scent = CLAMP(0, 10, scent);
+			int mapx = x + engine.camerax;
+			int mapy = y + engine.cameray;
 			float sc = scent * 0.1f;
-			if (isInFov(x, y))
-				TCODConsole::root->setCharBackground(x, y, isWall(x,y) ? lightWall : TCODColor::lightGrey * sc);
-			else if (isExplored(x, y))
-				TCODConsole::root->setCharBackground(x, y, isWall(x,y) ? darkWall : TCODColor::lightGrey * sc);
-			else if (!isWall(x, y))
+			if (isInFov(mapx, mapy))
+				TCODConsole::root->setCharBackground(x, y, isWall(mapx,mapy) ? 
+					lightWall : TCODColor::lightGrey * sc);
+			else if (isExplored(mapx, mapy))
+				TCODConsole::root->setCharBackground(x, y, isWall(mapx,mapy) ? 
+					darkWall : TCODColor::lightGrey * sc);
+			else if (!isWall(mapx, mapy))
 				TCODConsole::root->setCharBackground(x, y, TCODColor::white * sc);
 		}*/
 }

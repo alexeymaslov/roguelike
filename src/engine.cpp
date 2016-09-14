@@ -34,6 +34,30 @@ void Engine::init()
 	dagger->pickable = new Pickable();
 	player->container->add(dagger);
 	dagger->equipment->equip(dagger, player);
+	// TODO убрать отсюда
+	Actor *scrollOfLightningBolt = new Actor(0, 0, '#', "scroll of lightning bolt",
+		TCODColor::lightYellow);
+	scrollOfLightningBolt->blocks = false;
+	scrollOfLightningBolt->pickable = new Pickable(
+		new TargetSelector(TargetSelector::CLOSEST_MONSTER, 5), 
+		new HealthEffect(-20, "A lighting bolt strikes the %s with a loud thunder!\n"
+		"The damage is %g hit points."));
+	Actor *scrollOfFireball = new Actor(0, 0, '#', "scroll of fireball",
+		TCODColor::lightYellow);
+	scrollOfFireball->blocks = false;
+	scrollOfFireball->pickable = new Pickable(
+		new TargetSelector(TargetSelector::SELECTED_RANGE, 3), 
+		new HealthEffect(-12, "The %s gets burned for %g hit points."));
+	Actor *scrollOfConfusion = new Actor(0, 0, '#', "scroll of confusion",
+		TCODColor::lightYellow);
+	scrollOfConfusion->blocks = false;
+	scrollOfConfusion->pickable = new Pickable(
+		new TargetSelector(TargetSelector::SELECTED_MONSTER, 5), 
+		new AiChangeEffect(new ConfusedMonsterAi(10), 
+			"The eyes of the %s look vacant,\nas he starts to stumble around!"));
+	player->container->add(scrollOfLightningBolt);
+	player->container->add(scrollOfFireball);
+	player->container->add(scrollOfConfusion);
 
 	actors.push(player);
 	stairs = new Actor(0, 0, '>', "stairs", TCODColor::white);
@@ -44,7 +68,7 @@ void Engine::init()
 	map = new Map(mapWidth, mapHeight);
 	map->init(true);
 	gui->message(TCODColor::red, 
-		"Welcome stranger!\nPrepare to perish in the Tombs of the Ancient Kings.");
+		"Welcome to the dungeon, traveller!");
 	gameStatus = STARTUP;
 }
 
@@ -143,9 +167,9 @@ bool Engine::pickATile(int &x, int &y, float radius, float maxRange)
 				if (map->isInFov(cx, cy)
 				 && (maxRange == 0 || player->getDistance(cx, cy) <= maxRange))
 				{
-					TCODColor col = TCODConsole::root->getCharBackground(cx, cy);
+					TCODColor col = TCODConsole::root->getCharBackground(cx - camerax, cy - cameray);
 					col = col * 1.2f;
-					TCODConsole::root->setCharBackground(cx, cy, col);
+					TCODConsole::root->setCharBackground(cx - camerax, cy - cameray, col);
 				}
 
 		TCODSystem::checkForEvent(TCOD_EVENT_KEY_PRESS|TCOD_EVENT_MOUSE,&lastKey,&mouse);
@@ -157,7 +181,7 @@ bool Engine::pickATile(int &x, int &y, float radius, float maxRange)
 			for (int cx = 0; cx < map->width; ++cx)
 				for (int cy = 0; cy < map->height; ++cy)
 					if (getDistance(mapx, mapy, cx, cy) <= radius)
-						TCODConsole::root->setCharBackground(cx, cy, TCODColor::white);
+						TCODConsole::root->setCharBackground(cx - camerax, cy - cameray, TCODColor::white);
 
 			if (mouse.lbutton_pressed)
 			{
@@ -195,8 +219,7 @@ void Engine::nextLevel()
 	++level;
 	gui->message(TCODColor::lightViolet,"You take a moment to rest, and recover your strength.");
 	player->destructible->heal(player->destructible->maxHp(player) / 2, player);
-	gui->message(TCODColor::red,"After a rare moment of peace, you descend\n"
-		"deeper into the heart of the dungeon...");
+	gui->message(TCODColor::red,"You descend deeper into the heart of the dungeon...");
 
 	delete map;
 	for (Actor **i = actors.begin(); i != actors.end(); ++i)

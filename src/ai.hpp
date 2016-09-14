@@ -3,8 +3,8 @@
 #include "persistent.hpp"
 
 class Actor;
-
-static const int SCENT_THRESHOLD = 20;
+// TODO уточнить эту константу
+static const int SCENT_THRESHOLD = 10;
 
 class Ai : public Persistent
 {

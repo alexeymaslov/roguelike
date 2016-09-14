@@ -14,7 +14,7 @@ Engine::Engine(int screenWidth, int screenHeight, int mapWidth, int mapHeight) :
 	cameraWidth(screenWidth), cameraHeight(screenHeight - PANEL_HEIGHT),
 	mapWidth(mapWidth), mapHeight(mapHeight)
 {
-	TCODConsole::initRoot(screenWidth, screenHeight, "libtcod C++ tutorial", false);
+	TCODConsole::initRoot(screenWidth, screenHeight, "", false);
 	gui = new Gui();
 }
 

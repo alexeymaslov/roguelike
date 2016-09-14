@@ -74,4 +74,11 @@ protected :
 	GeneratedActorType rollActorType(const std::vector<Pair<GeneratedActorType, int>> &v) const;
 	int getChance(const std::vector<Pair<int, int>> &v) const;
 	void initItemOrMonsterChances();
+
+	void bspGeneration(bool withActors);
+	// TODO убрать в отдельный класс
+	void cellularAutomataGeneration(bool withActors);
+	void randomFillMap();
+	void makeCaverns(int nbWalls1Tile, int nbWalls2Tile);
+	int getAmountOfWallsNear(int x, int y, int dx = 1, int dy = 1);
 };

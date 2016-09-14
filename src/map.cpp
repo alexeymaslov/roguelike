@@ -61,10 +61,11 @@ void Map::init(bool withActors)
 	tiles = new Tile[width * height];
 	map = new TCODMap(width, height);
 	initItemOrMonsterChances();
-	TCODBsp bsp(0, 0, width, height);
-	bsp.splitRecursive(rng, 8, ROOM_MAX_SIZE, ROOM_MAX_SIZE, 1.5f, 1.5f);
-	BspListener listener(*this);
-	bsp.traverseInvertedLevelOrder(&listener, (void *) withActors);
+
+	if (engine.level % 2 - 1)
+		bspGeneration(withActors);
+	else
+		cellularAutomataGeneration(withActors);
 }
 
 Map::~Map()
@@ -82,6 +83,14 @@ bool Map::isWall(int x, int y) const
 bool Map::isExplored(int x, int y) const
 {
 	return tiles[x + y * width].explored;
+}
+
+void Map::bspGeneration(bool withActors)
+{
+	TCODBsp bsp(0, 0, width, height);
+	bsp.splitRecursive(rng, 8, ROOM_MAX_SIZE, ROOM_MAX_SIZE, 1.5f, 1.5f);
+	BspListener listener(*this);
+	bsp.traverseInvertedLevelOrder(&listener, (void *) withActors);
 }
 
 void Map::dig(int x1, int y1, int x2, int y2)
@@ -148,7 +157,7 @@ void Map::render() const
 			int mapy = y + engine.cameray;
 			if (isInFov(mapx, mapy))
 				TCODConsole::root->setCharBackground(x, y, isWall(mapx, mapy) ? lightWall : lightGround);
-			else if (isExplored(mapx, mapy))
+			else //if (isExplored(mapx, mapy))
 				TCODConsole::root->setCharBackground(x, y, isWall(mapx, mapy) ? darkWall : darkGround);
 		}
 
@@ -371,4 +380,104 @@ void Map::addItem(int x, int y)
 unsigned int Map::getScent(int x, int y) const
 {
 	return tiles[x + y * width].scent;
+}
+
+void Map::cellularAutomataGeneration(bool withActors)
+{
+	randomFillMap();
+	for (int i = 0; i < 4; ++i)
+		makeCaverns(4, 2);
+	for (int i = 0; i < 3; ++i)
+		makeCaverns(4, -2);
+	int x;
+	int y;
+	do
+	{
+		x = rng->getInt(1, width);
+		y = rng->getInt(1, height);
+	}
+	while (!map->isWalkable(x, y));
+	engine.player->x = x;
+	engine.player->y = y;
+
+	do
+	{
+		x = rng->getInt(1, width);
+		y = rng->getInt(1, height);
+	}
+	while (!map->isWalkable(x, y));
+	engine.stairs->x = x;
+	engine.stairs->y = y;
+}
+
+void Map::randomFillMap()
+{
+	const int chanceOfWall = 48;
+	const int middleWallLength = width / 20;
+	const int middleWallHeight = height / 20;
+	const int middlex = width / 2;
+	const int middley = height / 2;
+	// Границы карты пусть будут стенами
+	for (int x = 1; x < width - 1; ++x)
+		for (int y = 1; y < height - 1; ++y)
+		{
+			if ((x < middlex + middleWallLength && x > middlex - middleWallLength) && 
+				(y < middley + middleWallHeight && y > middley - middleWallHeight))
+				map->setProperties(x, y, true, true);
+			else if (rng->getInt(1, 100) > chanceOfWall)
+				map->setProperties(x, y, true, true);
+		}
+}
+
+void Map::makeCaverns(int nbWalls1Tile, int nbWalls2Tile)
+{
+	bool isWall[width][height];
+	for (int x = 0; x < width; ++x)
+	{
+		isWall[x][0] = true;
+		isWall[x][height - 1] = true;
+	}
+	for (int y = 0; y < height; ++y)
+	{
+		isWall[0][y] = true;
+		isWall[width - 1][y] = true;
+	}
+
+	for (int x = 1; x < width - 1; ++x)
+		for (int y = 1; y < height - 1; ++y)
+		{
+			bool walkable = map->isWalkable(x, y);
+			int nbWallsNear = getAmountOfWallsNear(x, y);
+			int nbWalls2TilesNear = getAmountOfWallsNear(x, y, 2, 2);
+			/*
+			if (nbWallsNear >= nbWalls1Tile || nbWalls2TilesNear <= nbWalls2Tile)
+				isWall[x][y] = true;
+			else
+				isWall[x][y] = false;*/
+			if (!walkable && nbWallsNear >= nbWalls1Tile)
+				isWall[x][y] = true;
+			else if (walkable && nbWallsNear >= nbWalls1Tile + 1)
+				isWall[x][y] = true;
+			else if (nbWalls2TilesNear <= nbWalls2Tile)
+				isWall[x][y] = true;
+			else
+				isWall[x][y] = false;
+		}
+	for (int x = 1; x < width - 1; ++x)
+		for (int y = 1; y < height - 1; ++y)
+			map->setProperties(x, y, !isWall[x][y], !isWall[x][y]);
+}
+
+int Map::getAmountOfWallsNear(int cx, int cy, int dx, int dy)
+{
+	int i = 0;
+
+	for (int x = cx - dx; x <= cx + dx; ++x)
+		for (int y = cy - dy; y <= cy + dy; ++y)
+			if (y != cy || x != cx)
+				if (x < 0 || y < 0 || x >= width || y >= height || 
+					!map->isWalkable(x, y))
+					++i;
+
+	return i;
 }

@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <math.h>
+#include <stdio.h>
 
 #include "map.hpp"
 
@@ -384,13 +385,18 @@ unsigned int Map::getScent(int x, int y) const
 
 void Map::cellularAutomataGeneration(bool withActors)
 {
-	randomFillMap();
-	for (int i = 0; i < 4; ++i)
-		makeCaverns(4, 2);
-	for (int i = 0; i < 3; ++i)
-		makeCaverns(4, -2);
+	do
+	{
+		randomFillMap();
+		for (int i = 0; i < 4; ++i)
+			makeCaverns(4, 2);
+		for (int i = 0; i < 3; ++i)
+			makeCaverns(4, -2);
+	} while (!floodFill());
+
 	int x;
 	int y;
+	TCODRandom *rng = TCODRandom::getInstance();
 	do
 	{
 		x = rng->getInt(1, width);
@@ -412,8 +418,10 @@ void Map::cellularAutomataGeneration(bool withActors)
 
 void Map::randomFillMap()
 {
-	const int chanceOfWall = 48;
-	const int middleWallLength = width / 20;
+	const int chanceOfWall = 45;
+	// Пустое место в центре, чтобы уменьшить выроятность генерации вертикальной стены
+	// возможно не спасет от горизонтальных стен
+	const int middleWallLength = width / 20; 
 	const int middleWallHeight = height / 20;
 	const int middlex = width / 2;
 	const int middley = height / 2;
@@ -449,16 +457,9 @@ void Map::makeCaverns(int nbWalls1Tile, int nbWalls2Tile)
 			bool walkable = map->isWalkable(x, y);
 			int nbWallsNear = getAmountOfWallsNear(x, y);
 			int nbWalls2TilesNear = getAmountOfWallsNear(x, y, 2, 2);
-			/*
-			if (nbWallsNear >= nbWalls1Tile || nbWalls2TilesNear <= nbWalls2Tile)
-				isWall[x][y] = true;
-			else
-				isWall[x][y] = false;*/
-			if (!walkable && nbWallsNear >= nbWalls1Tile)
-				isWall[x][y] = true;
-			else if (walkable && nbWallsNear >= nbWalls1Tile + 1)
-				isWall[x][y] = true;
-			else if (nbWalls2TilesNear <= nbWalls2Tile)
+			if ((!walkable && nbWallsNear >= nbWalls1Tile)
+			|| (walkable && nbWallsNear >= nbWalls1Tile + 1)
+			|| (nbWalls2TilesNear <= nbWalls2Tile))
 				isWall[x][y] = true;
 			else
 				isWall[x][y] = false;
@@ -468,7 +469,7 @@ void Map::makeCaverns(int nbWalls1Tile, int nbWalls2Tile)
 			map->setProperties(x, y, !isWall[x][y], !isWall[x][y]);
 }
 
-int Map::getAmountOfWallsNear(int cx, int cy, int dx, int dy)
+int Map::getAmountOfWallsNear(int cx, int cy, int dx, int dy) const
 {
 	int i = 0;
 
@@ -480,4 +481,64 @@ int Map::getAmountOfWallsNear(int cx, int cy, int dx, int dy)
 					++i;
 
 	return i;
+}
+
+bool Map::floodFill()
+{	
+	// TODO тяжело было передавать двумерный массив в функцию, надо переделать
+	bool isWall[width * height];
+	for (int x = 0; x < width; ++x)
+		for (int y = 0; y < height; ++y)
+			isWall[x + y * width] = !map->isWalkable(x, y);
+
+	static const float WallThreshold = 55;
+	// 3 раза пытаемся найти подходящую точку для заливки
+	int counter = 3;
+	do
+	{
+		int x;
+		int y;
+		TCODRandom *rng = TCODRandom::getInstance();
+		do
+		{
+			x = rng->getInt(1, width);
+			y = rng->getInt(1, height);
+		}
+		while (!map->isWalkable(x, y));
+		fill(x, y, isWall);
+
+		for (int x = 0; x < width; ++x)
+			for (int y = 0; y < height; ++y)
+				if (!isWall[x + y * width])
+					map->setProperties(x, y, false, false);
+
+		if (calcPercentOfWalls() <= WallThreshold)
+			return true;
+		--counter;
+	} while (counter > 0);
+	return false;
+
+}
+
+void Map::fill(int x, int y, bool *isWall)
+{
+	if (!isWall[x + y * width])
+	{
+		isWall[x + y * width] = true;
+		fill(x + 1, y, isWall);
+		fill(x - 1, y, isWall);
+		fill(x, y + 1, isWall);
+		fill(x, y - 1, isWall);
+	}
+}
+
+float Map::calcPercentOfWalls() const
+{
+	int nbWalls = 0;
+	int nbCells = width * height;
+	for (int x = 0; x < width; ++x)
+		for (int y = 0; y < height; ++y)
+			if (!map->isWalkable(x, y))
+				++nbWalls;
+	return ((float)nbWalls) / nbCells;
 }

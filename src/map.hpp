@@ -76,9 +76,15 @@ protected :
 	void initItemOrMonsterChances();
 
 	void bspGeneration(bool withActors);
+
 	// TODO убрать в отдельный класс
 	void cellularAutomataGeneration(bool withActors);
 	void randomFillMap();
 	void makeCaverns(int nbWalls1Tile, int nbWalls2Tile);
-	int getAmountOfWallsNear(int x, int y, int dx = 1, int dy = 1);
+	int getAmountOfWallsNear(int x, int y, int dx = 1, int dy = 1) const;
+
+	// возвращает false, если необходимо перегенерировать карту
+	bool floodFill();
+	void fill(int x, int y, bool *wall);
+	float calcPercentOfWalls() const;
 };

@@ -63,7 +63,7 @@ void Map::init(bool withActors)
 	map = new TCODMap(width, height);
 	initItemOrMonsterChances();
 
-	if (engine.level % 2 - 1)
+	if (engine.level % 2)
 		bspGeneration(withActors);
 	else
 		cellularAutomataGeneration(withActors);

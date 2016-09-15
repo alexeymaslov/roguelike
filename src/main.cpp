@@ -3,7 +3,7 @@
 #include "engine.hpp"
 
 // TODO убрать эти параметры в параметры main
-Engine engine(80, 50, 120, 100);
+Engine engine(80, 50, 80, 43);
 
 int main()
 {

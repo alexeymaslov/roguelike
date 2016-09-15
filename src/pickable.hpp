@@ -9,7 +9,7 @@ class Actor;
 class Pickable : public Persistent
 {
 public:
-	Pickable(TargetSelector *selector = NULL, Effect *effect = NULL);
+	Pickable(TargetSelector *selector = nullptr, Effect *effect = nullptr);
 	virtual ~Pickable();
 
 	bool pick(Actor *owner, Actor *wearer);

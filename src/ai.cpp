@@ -241,14 +241,14 @@ Actor *PlayerAi::choseFromInventory(Actor *owner)
 	TCODConsole::flush();
 
 	TCOD_key_t key;
-	TCODSystem::waitForEvent(TCOD_EVENT_KEY_PRESS, &key, NULL, true);
+	TCODSystem::waitForEvent(TCOD_EVENT_KEY_PRESS, &key, nullptr, true);
 	if (key.vk == TCODK_CHAR)
 	{
 		int actorIndex = key.c - 'a';
 		if (actorIndex >= 0 && actorIndex < owner->container->inventory.size())
 			return owner->container->inventory.get(actorIndex);
 	}
-	return NULL;
+	return nullptr;
 }
 
 void MonsterAi::update(Actor *owner)
@@ -347,7 +347,7 @@ void MonsterAi::moveToCoords(Actor *owner, int targetx, int targety)
 		owner->y += stepdy;
 }
 
-TemporaryAi::TemporaryAi(int nbTurns) : nbTurns(nbTurns), oldAi(NULL)
+TemporaryAi::TemporaryAi(int nbTurns) : nbTurns(nbTurns), oldAi(nullptr)
 {
 
 }

@@ -27,7 +27,7 @@ Actor *Equipment::getEquippedInSlot(Equipment::Slot slot, Actor *wearer)
 		if (item->equipment && item->equipment->slot == slot && item->equipment->equipped)
 			return item;
 	}
-	return NULL;
+	return nullptr;
 }
 
 void Equipment::equip(Actor *owner, Actor *wearer)

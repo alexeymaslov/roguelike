@@ -147,10 +147,10 @@ void Map::createRoom(bool first, int x1, int y1, int x2, int y2, bool withActors
 
 void Map::render() const
 {
-	static const TCODColor darkWall(0, 0, 100);
-	static const TCODColor darkGround(50, 50, 150);
-	static const TCODColor lightWall(130,110,50);
-	static const TCODColor lightGround(200,180,50);
+	static const TCODColor darkWall = TCODColor::darkerHan;
+	static const TCODColor darkGround = TCODColor::desaturatedHan;
+	static const TCODColor lightWall = TCODColor::darkestGreen;
+	static const TCODColor lightGround = TCODColor::desaturatedGreen;
 	for (int x = 0; x < engine.cameraWidth; ++x)
 		for (int y = 0; y < engine.cameraHeight; ++y)
 		{
@@ -166,10 +166,10 @@ void Map::render() const
 	/*for (int x = 0; x < engine.cameraWidth; ++x)
 		for (int y = 0; y < engine.cameraHeight; ++y)
 		{
-			int scent = SCENT_THRESHOLD - (currentScentValue - getScent(x, y));
-			scent = CLAMP(0, 10, scent);
 			int mapx = x + engine.camerax;
 			int mapy = y + engine.cameray;
+			int scent = SCENT_THRESHOLD - (currentScentValue - getScent(mapx, mapy));
+			scent = CLAMP(0, 10, scent);
 			float sc = scent * 0.1f;
 			if (isInFov(mapx, mapy))
 				TCODConsole::root->setCharBackground(x, y, isWall(mapx,mapy) ? 
@@ -288,7 +288,7 @@ void Map::addMonster(int x, int y)
 	{
 		case ORC:
 		{
-			Actor *orc = new Actor(x, y, 'o', "orc", TCODColor::desaturatedGreen);
+			Actor *orc = new Actor(x, y, 'o', "orc", TCODColor::brass);
 			orc->destructible = new MonsterDestructible(10, 0, "dead orc", 20);
 			orc->attacker = new Attacker(3);
 			orc->ai = new MonsterAi();
@@ -297,7 +297,7 @@ void Map::addMonster(int x, int y)
 		break;
 		case TROLL:
 		{
-			Actor *troll = new Actor(x, y, 'T', "troll", TCODColor::darkerGreen);
+			Actor *troll = new Actor(x, y, 'T', "troll", TCODColor::darkerCrimson);
 			troll->destructible = new MonsterDestructible(16, 1, "troll carcass", 40);
 			troll->attacker = new Attacker(4);
 			troll->ai = new MonsterAi();
@@ -317,9 +317,9 @@ void Map::addItem(int x, int y)
 		case HEALER:
 		{
 			Actor *healthPotion = new Actor(x, y, '!', "health potion",
-				TCODColor::violet);
+				TCODColor::lightLime);
 			healthPotion->blocks = false;
-			healthPotion->pickable = new Pickable(NULL, 
+			healthPotion->pickable = new Pickable(nullptr, 
 				new HealthEffect(4, "%s is healed for %g health"));
 			engine.actors.push(healthPotion);
 		}
@@ -327,7 +327,7 @@ void Map::addItem(int x, int y)
 		case LIGHTNING_BOLT:
 		{
 			Actor *scrollOfLightningBolt = new Actor(x, y, '#', "scroll of lightning bolt",
-				TCODColor::lightYellow);
+				TCODColor::gold);
 			scrollOfLightningBolt->blocks = false;
 			scrollOfLightningBolt->pickable = new Pickable(
 				new TargetSelector(TargetSelector::CLOSEST_MONSTER, 5), 
@@ -339,7 +339,7 @@ void Map::addItem(int x, int y)
 		case FIREBALL:
 		{
 			Actor *scrollOfFireball = new Actor(x, y, '#', "scroll of fireball",
-				TCODColor::lightYellow);
+				TCODColor::peach);
 			scrollOfFireball->blocks = false;
 			scrollOfFireball->pickable = new Pickable(
 				new TargetSelector(TargetSelector::SELECTED_RANGE, 3), 
@@ -350,7 +350,7 @@ void Map::addItem(int x, int y)
 		case CONFUSER:
 		{
 			Actor *scrollOfConfusion = new Actor(x, y, '#', "scroll of confusion",
-				TCODColor::lightYellow);
+				TCODColor::celadon);
 			scrollOfConfusion->blocks = false;
 			scrollOfConfusion->pickable = new Pickable(
 				new TargetSelector(TargetSelector::SELECTED_MONSTER, 5), 

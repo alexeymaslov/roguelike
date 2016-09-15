@@ -59,16 +59,16 @@ void Engine::load()
 		int height = zip.getInt();
 		map = new Map(width, height);
 		map->load(zip);
-		player = new Actor(0, 0, 0, NULL, TCODColor::white);
+		player = new Actor(0, 0, 0, nullptr, TCODColor::white);
 		player->load(zip);
 		actors.push(player);
-		stairs = new Actor(0, 0, 0, NULL, TCODColor::white);
+		stairs = new Actor(0, 0, 0, nullptr, TCODColor::white);
 		stairs->load(zip);
 		actors.push(stairs);
 		int nbActors = zip.getInt();
 		while (nbActors > 0)
 		{
-			Actor *actor = new Actor(0, 0, 0, NULL, TCODColor::white);
+			Actor *actor = new Actor(0, 0, 0, nullptr, TCODColor::white);
 			actor->load(zip);
 			actors.push(actor);
 			--nbActors;
@@ -131,12 +131,12 @@ void Actor::save(TCODZip &zip)
 	zip.putColor(&col);
 	zip.putString(name);
 	zip.putInt(blocks);
-	zip.putInt(attacker != NULL);
-	zip.putInt(destructible != NULL);
-	zip.putInt(ai != NULL);
-	zip.putInt(pickable != NULL);
-	zip.putInt(container != NULL);
-	zip.putInt(equipment != NULL);
+	zip.putInt(attacker != nullptr);
+	zip.putInt(destructible != nullptr);
+	zip.putInt(ai != nullptr);
+	zip.putInt(pickable != nullptr);
+	zip.putInt(container != nullptr);
+	zip.putInt(equipment != nullptr);
 	if (attacker) attacker->save(zip);
 	if (destructible) destructible->save(zip);
 	if (ai) ai->save(zip);
@@ -170,7 +170,7 @@ void Actor::load(TCODZip &zip)
 		ai = Ai::create(zip);
 	if (hasPickable)
 	{
-		pickable = new Pickable(NULL, NULL);
+		pickable = new Pickable(nullptr, nullptr);
 		pickable->load(zip);
 	}
 	if (hasContainer)
@@ -209,7 +209,7 @@ void Container::load(TCODZip &zip)
 	int nbActors = zip.getInt();
 	while (nbActors > 0)
 	{
-		Actor *actor = new Actor(0, 0, 0, NULL, TCODColor::white);
+		Actor *actor = new Actor(0, 0, 0, nullptr, TCODColor::white);
 		actor->load(zip);
 		inventory.push(actor);
 		--nbActors;
@@ -249,14 +249,14 @@ void MonsterDestructible::save(TCODZip &zip)
 Destructible *Destructible::create(TCODZip &zip)
 {
 	DestructibleType type = (DestructibleType) zip.getInt();
-	Destructible *destructible = NULL;
+	Destructible *destructible = nullptr;
 	switch (type)
 	{
 		case MONSTER:
-			destructible = new MonsterDestructible(0, 0, NULL, 0);
+			destructible = new MonsterDestructible(0, 0, nullptr, 0);
 		break;
 		case PLAYER:
-			destructible = new PlayerDestructible(0, 0, NULL);
+			destructible = new PlayerDestructible(0, 0, nullptr);
 		break;
 	}
 	destructible->load(zip);
@@ -287,7 +287,7 @@ void PlayerAi::load(TCODZip &zip)
 Ai *Ai::create(TCODZip &zip)
 {
 	AiType type = (AiType) zip.getInt();
-	Ai *ai = NULL;
+	Ai *ai = nullptr;
 	switch(type)
 	{
 		case PLAYER: 
@@ -310,7 +310,7 @@ Ai *Ai::create(TCODZip &zip)
 TemporaryAi *TemporaryAi::create(TCODZip &zip)
 {
 	TemporaryAiType type = (TemporaryAiType) zip.getInt();
-	TemporaryAi *ai = NULL;
+	TemporaryAi *ai = nullptr;
 	switch (type)
 	{
 		case CONFUSED_MONSTER:
@@ -330,7 +330,7 @@ void ConfusedMonsterAi::save(TCODZip &zip)
 void TemporaryAi::save(TCODZip &zip)
 {
 	zip.putInt(nbTurns);
-	zip.putInt(oldAi != NULL);
+	zip.putInt(oldAi != nullptr);
 	if (oldAi) oldAi->save(zip);
 }
 
@@ -367,8 +367,8 @@ void Equipment::load(TCODZip &zip)
 
 void Pickable::save(TCODZip &zip)
 {
-	zip.putInt(selector != NULL);
-	zip.putInt(effect != NULL);
+	zip.putInt(selector != nullptr);
+	zip.putInt(effect != nullptr);
 	if (selector) selector->save(zip);
 	if (effect) effect->save(zip);
 }
@@ -401,14 +401,14 @@ void TargetSelector::load(TCODZip &zip)
 Effect *Effect::create(TCODZip &zip)
 {
 	EffectType type = (EffectType) zip.getInt();
-	Effect *effect = NULL;
+	Effect *effect = nullptr;
 	switch (type)
 	{
 		case HEALTH:
-			effect = new HealthEffect(0, NULL);
+			effect = new HealthEffect(0, nullptr);
 		break;
 		case AI_CHANGE:
-			effect = new AiChangeEffect(NULL, NULL);
+			effect = new AiChangeEffect(nullptr, nullptr);
 		break;
 	}
 	effect->load(zip);
@@ -432,7 +432,7 @@ void AiChangeEffect::save(TCODZip &zip)
 {
 	zip.putInt(AI_CHANGE);
 	zip.putString(message);
-	zip.putInt(newAi != NULL);
+	zip.putInt(newAi != nullptr);
 	if (newAi) newAi->save(zip);
 }
 

@@ -9,7 +9,7 @@ Engine::Engine(int screenWidth, int screenHeight) :
 }
 
 Engine::Engine(int screenWidth, int screenHeight, int mapWidth, int mapHeight) : 
-	gameStatus(STARTUP), player(NULL), map(NULL), fovRadius(10), 
+	gameStatus(STARTUP), player(nullptr), map(nullptr), fovRadius(10), 
 	level(1), screenWidth(screenWidth), screenHeight(screenHeight),
 	cameraWidth(screenWidth), cameraHeight(screenHeight - PANEL_HEIGHT),
 	mapWidth(mapWidth), mapHeight(mapHeight)
@@ -36,20 +36,20 @@ void Engine::init()
 	dagger->equipment->equip(dagger, player);
 	// TODO убрать отсюда
 	Actor *scrollOfLightningBolt = new Actor(0, 0, '#', "scroll of lightning bolt",
-		TCODColor::lightYellow);
+		TCODColor::gold);
 	scrollOfLightningBolt->blocks = false;
 	scrollOfLightningBolt->pickable = new Pickable(
 		new TargetSelector(TargetSelector::CLOSEST_MONSTER, 5), 
 		new HealthEffect(-20, "A lighting bolt strikes the %s with a loud thunder!\n"
 		"The damage is %g hit points."));
 	Actor *scrollOfFireball = new Actor(0, 0, '#', "scroll of fireball",
-		TCODColor::lightYellow);
+		TCODColor::peach);
 	scrollOfFireball->blocks = false;
 	scrollOfFireball->pickable = new Pickable(
 		new TargetSelector(TargetSelector::SELECTED_RANGE, 3), 
 		new HealthEffect(-12, "The %s gets burned for %g hit points."));
 	Actor *scrollOfConfusion = new Actor(0, 0, '#', "scroll of confusion",
-		TCODColor::lightYellow);
+		TCODColor::celadon);
 	scrollOfConfusion->blocks = false;
 	scrollOfConfusion->pickable = new Pickable(
 		new TargetSelector(TargetSelector::SELECTED_MONSTER, 5), 
@@ -138,7 +138,7 @@ void Engine::sendToBack(Actor *actor)
 
 Actor *Engine::getClosestMonster(int x, int y, float range) const
 {
-	Actor *closest = NULL;
+	Actor *closest = nullptr;
 	float bestDistance = 1E6f;
 	for (Actor **it = actors.begin(); it != actors.end(); ++it)
 	{
@@ -211,7 +211,7 @@ Actor *Engine::getActor(int x, int y) const
 			&& !actor->destructible->isDead())
 			return actor;
 	}
-	return NULL;
+	return nullptr;
 }
 
 void Engine::nextLevel()

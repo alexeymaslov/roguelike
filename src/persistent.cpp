@@ -15,13 +15,13 @@
 
 void Engine::save()
 {
-	if (player->destructible->isDead())
+	if (player->getDestructible()->isDead())
 		TCODSystem::deleteFile("game.sav");
 	else
 	{
 		TCODZip zip;
-		zip.putInt(map->width);
-		zip.putInt(map->height);
+		zip.putInt(map->getWidth());
+		zip.putInt(map->getHeight());
 		map->save(zip);
 		player->save(zip);
 		stairs->save(zip);
@@ -36,24 +36,24 @@ void Engine::save()
 
 void Engine::load()
 {
-	engine.gui->menu.clear();
-	engine.gui->menu.addItem(Menu::NEW_GAME, "New game");
+	gui->getMenu().clear();
+	gui->getMenu().addItem(Menu::NewGame, "New game");
 	if (TCODSystem::fileExists("game.sav"))
-		engine.gui->menu.addItem(Menu::CONTINUE, "Continue");
-	engine.gui->menu.addItem(Menu::EXIT, "Exit");
+		gui->getMenu().addItem(Menu::Continue, "Continue");
+	gui->getMenu().addItem(Menu::Exit, "Exit");
 
-	Menu::MenuItemCode menuItem = engine.gui->menu.pick();
-	if (menuItem == Menu::EXIT || menuItem == Menu::NONE)
+	Menu::MenuItemCode menuItem = gui->getMenu().pick();
+	if (menuItem == Menu::Exit || menuItem == Menu::None)
 		exit(0);
-	else if (menuItem == Menu::NEW_GAME)
+	else if (menuItem == Menu::NewGame)
 	{
-		engine.term();
-		engine.init();
+		term();
+		init();
 	}
 	else
 	{
 		TCODZip zip;
-		engine.term();
+		term();
 		zip.loadFromFile("game.sav");
 		int width = zip.getInt();
 		int height = zip.getInt();
@@ -74,7 +74,7 @@ void Engine::load()
 			--nbActors;
 		}
 		gui->load(zip);
-		gameStatus = STARTUP;
+		gameStatus = StartUp;
 	}
 }
 
@@ -128,7 +128,7 @@ void Actor::save(TCODZip &zip)
 	zip.putInt(x);
 	zip.putInt(y);
 	zip.putInt(ch);
-	zip.putColor(&col);
+	zip.putColor(&color);
 	zip.putString(name);
 	zip.putInt(blocks);
 	zip.putInt(attacker != nullptr);
@@ -150,7 +150,7 @@ void Actor::load(TCODZip &zip)
 	x = zip.getInt();
 	y = zip.getInt();
 	ch = zip.getInt();
-	col = zip.getColor();
+	color = zip.getColor();
 	name = strdup(zip.getString());
 	blocks = zip.getInt();
 	bool hasAttacker = zip.getInt();
@@ -161,26 +161,32 @@ void Actor::load(TCODZip &zip)
 	bool hasEquipment = zip.getInt();
 	if (hasAttacker)
 	{
-		attacker = new Attacker(0.0f);
+		attacker = new Attacker(this, 0.0f);
 		attacker->load(zip);
 	}
 	if (hasDestructible)
+	{
 		destructible = Destructible::create(zip);
+		destructible->setOwner(this);
+	}
 	if (hasAi)
+	{
 		ai = Ai::create(zip);
+		ai->setOwner(this);
+	}
 	if (hasPickable)
 	{
-		pickable = new Pickable(nullptr, nullptr);
+		pickable = new Pickable(this, nullptr, nullptr);
 		pickable->load(zip);
 	}
 	if (hasContainer)
 	{
-		container = new Container(0);
+		container = new Container(this, 0);
 		container->load(zip);
 	}
 	if (hasEquipment)
 	{
-		equipment = new Equipment(Equipment::RIGHT_HAND);
+		equipment = new Equipment(this, Equipment::RightHand);
 		equipment->load(zip);
 	}
 }
@@ -197,7 +203,7 @@ void Attacker::load(TCODZip &zip)
 
 void Container::save(TCODZip &zip)
 {
-	zip.putInt(size);
+	zip.putInt(maxSize);
 	zip.putInt(inventory.size());
 	for (Actor **i = inventory.begin(); i != inventory.end(); ++i)
 		(*i)->save(zip);
@@ -205,13 +211,13 @@ void Container::save(TCODZip &zip)
 
 void Container::load(TCODZip &zip)
 {
-	size = zip.getInt();
+	maxSize = zip.getInt();
 	int nbActors = zip.getInt();
 	while (nbActors > 0)
 	{
 		Actor *actor = new Actor(0, 0, 0, nullptr, TCODColor::white);
 		actor->load(zip);
-		inventory.push(actor);
+		add(actor);
 		--nbActors;
 	}
 }
@@ -236,13 +242,13 @@ void Destructible::load(TCODZip &zip)
 
 void PlayerDestructible::save(TCODZip &zip)
 {
-	zip.putInt(PLAYER);
+	zip.putInt(Player);
 	Destructible::save(zip);
 }
 
 void MonsterDestructible::save(TCODZip &zip)
 {
-	zip.putInt(MONSTER);
+	zip.putInt(Monster);
 	Destructible::save(zip);
 }
 
@@ -252,11 +258,11 @@ Destructible *Destructible::create(TCODZip &zip)
 	Destructible *destructible = nullptr;
 	switch (type)
 	{
-		case MONSTER:
-			destructible = new MonsterDestructible(0, 0, nullptr, 0);
+		case Monster:
+			destructible = new MonsterDestructible(nullptr, 0, 0, nullptr, 0);
 		break;
-		case PLAYER:
-			destructible = new PlayerDestructible(0, 0, nullptr);
+		case Player:
+			destructible = new PlayerDestructible(nullptr, 0, 0, nullptr);
 		break;
 	}
 	destructible->load(zip);
@@ -265,7 +271,7 @@ Destructible *Destructible::create(TCODZip &zip)
 
 void MonsterAi::save(TCODZip &zip)
 {
-	zip.putInt(MONSTER);
+	zip.putInt(Monster);
 }
 
 void MonsterAi::load(TCODZip &zip)
@@ -275,7 +281,7 @@ void MonsterAi::load(TCODZip &zip)
 
 void PlayerAi::save(TCODZip &zip)
 {
-	zip.putInt(PLAYER);
+	zip.putInt(Player);
 	zip.putInt(xpLevel);
 }
 
@@ -290,13 +296,13 @@ Ai *Ai::create(TCODZip &zip)
 	Ai *ai = nullptr;
 	switch(type)
 	{
-		case PLAYER: 
-			ai = new PlayerAi();
+		case Player: 
+			ai = new PlayerAi(nullptr);
 		break;
-		case MONSTER: 
-			ai = new MonsterAi();
+		case Monster: 
+			ai = new MonsterAi(nullptr);
 		break;
-		case TEMPORARY_AI:
+		case TemporaryAi:
 		{
 			ai = TemporaryAi::create(zip);
 			return ai;
@@ -313,8 +319,8 @@ TemporaryAi *TemporaryAi::create(TCODZip &zip)
 	TemporaryAi *ai = nullptr;
 	switch (type)
 	{
-		case CONFUSED_MONSTER:
-			ai = new ConfusedMonsterAi(0);
+		case ConfusedMonster:
+			ai = new ConfusedMonsterAi(nullptr, 0);
 		break;
 	}
 	ai->load(zip);
@@ -323,7 +329,7 @@ TemporaryAi *TemporaryAi::create(TCODZip &zip)
 
 void ConfusedMonsterAi::save(TCODZip &zip)
 {
-	zip.putInt(CONFUSED_MONSTER);
+	zip.putInt(ConfusedMonster);
 	TemporaryAi::save(zip);
 }
 
@@ -379,7 +385,7 @@ void Pickable::load(TCODZip &zip)
 	bool hasEffect = zip.getInt();
 	if (hasSelector)
 	{
-		selector = new TargetSelector(TargetSelector::CLOSEST_MONSTER, 0);
+		selector = new TargetSelector(TargetSelector::ClosestMonster, 0);
 		selector->load(zip);
 	}
 	if (hasEffect)
@@ -404,10 +410,10 @@ Effect *Effect::create(TCODZip &zip)
 	Effect *effect = nullptr;
 	switch (type)
 	{
-		case HEALTH:
+		case Health:
 			effect = new HealthEffect(0, nullptr);
 		break;
-		case AI_CHANGE:
+		case AiChange:
 			effect = new AiChangeEffect(nullptr, nullptr);
 		break;
 	}
@@ -417,7 +423,7 @@ Effect *Effect::create(TCODZip &zip)
 
 void HealthEffect::save(TCODZip &zip)
 {
-	zip.putInt(HEALTH);
+	zip.putInt(Health);
 	zip.putFloat(amount);
 	zip.putString(message);
 }
@@ -430,7 +436,7 @@ void HealthEffect::load(TCODZip &zip)
 
 void AiChangeEffect::save(TCODZip &zip)
 {
-	zip.putInt(AI_CHANGE);
+	zip.putInt(AiChange);
 	zip.putString(message);
 	zip.putInt(newAi != nullptr);
 	if (newAi) newAi->save(zip);

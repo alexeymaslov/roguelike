@@ -17,34 +17,37 @@ public:
 protected:
 	enum EffectType
 	{
-		HEALTH, AI_CHANGE
+		Health, AiChange
 	};
 };
 
 class HealthEffect : public Effect
 {
 public:
-	float amount;
-	// message должно иметь %s для actor->name и %g для количества хп  
-	const char *message;
 	// TODO добавить цвет к сообщению
 	HealthEffect(float amount, const char *message);
 	bool applyTo(Actor *actor);
 
 	void save(TCODZip &zip);
 	void load(TCODZip &zip);
+
+protected:
+	float amount;	
+	// message должно иметь %s для actor->getName() и %g для количества хп  
+	const char *message;
 };
 
 class AiChangeEffect : public Effect
 {
 public:
-	TemporaryAi *newAi;
-	// message должно иметь %s для actor->name
-	const char *message;
-
 	AiChangeEffect(TemporaryAi *newAi, const char *message);
 	bool applyTo(Actor *actor);
 
 	void save(TCODZip &zip);
 	void load(TCODZip &zip);
+
+protected:
+	TemporaryAi *newAi;
+	// message должно иметь %s для actor->getName()
+	const char *message;
 };

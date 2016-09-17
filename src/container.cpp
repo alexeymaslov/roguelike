@@ -2,7 +2,7 @@
 
 #include "actor.hpp"
 
-Container::Container(int size) : size(size)
+Container::Container(Actor *owner, int maxSize) : owner(owner), maxSize(maxSize)
 {
 
 }
@@ -14,8 +14,12 @@ Container::~Container()
 
 bool Container::add(Actor *actor)
 {
-	if (size < 0 || inventory.size() >= size) return false;
+	if (maxSize < 0 || inventory.size() >= maxSize) return false;
 	inventory.push(actor);
+	if (actor->getEquipment())
+		actor->getEquipment()->setContainer(this);
+	if (actor->getPickable())
+		actor->getPickable()->setContainer(this);
 	return true;
 }
 

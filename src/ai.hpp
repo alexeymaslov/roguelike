@@ -4,65 +4,73 @@
 
 class Actor;
 // TODO уточнить эту константу
-static const int SCENT_THRESHOLD = 10;
+static const int ScentThreshold = 10;
 
 class Ai : public Persistent
 {
 public:
+	Ai(Actor *owner);
 	virtual ~Ai() {};
-	virtual void update(Actor *owner) = 0;
+	void setOwner(Actor *owner) { this->owner = owner; };
+	virtual void update() = 0;
 
 	static Ai *create(TCODZip &zip);
 
 protected:
 	enum AiType
 	{
-		MONSTER, TEMPORARY_AI, PLAYER
+		Monster, TemporaryAi, Player
 	};
+
+	Actor *owner;
 };
 
 class PlayerAi : public Ai
 {
 public:
-	int xpLevel;
-	PlayerAi();
+	PlayerAi(Actor *owner);
+
+	void update();
 	int getNextLevelXp();
-	void update(Actor *owner);
+	int getXpLevel() const { return xpLevel; };
 
 	void save(TCODZip &zip);
 	void load(TCODZip &zip);
 
 protected:
-	// returns true if owner actually moved
-	bool moveOrAttack(Actor *owner, int targetx, int targety);
+	int xpLevel;
 
-	void handleActionKey(Actor *owner, int ascii);
-
-	Actor *choseFromInventory(Actor *owner);
+	// Возвращает true, если owner действительно переместился
+	bool moveOrAttack(int targetx, int targety);
+	// ascii - символ нажатой клавиши
+	void handleActionKey(int ascii);
+	// Возвращает объект с компонентой Pickable выбранный из Container
+	Actor *choseFromInventory();
+	void levelUp();
 };
 
 class MonsterAi : public Ai
 {
 public:
-	void update(Actor *owner);
+	MonsterAi(Actor *owner);
+	void update();
 
 	void save(TCODZip &zip);
 	void load(TCODZip &zip);
 
 protected:
-	void moveOrAttack(Actor *owner, Actor *target);
-
+	void moveOrAttack(Actor *target);
 	// Использует pathfinding
-	void moveToTarget(Actor *owner, Actor *target);
+	void moveToTarget(Actor *target);
 	// Старая модель поиска пути
-	void moveToCoords(Actor *owner, int targetx, int targety);
+	void moveToCoords(int targetx, int targety);
 };
 
 class TemporaryAi : public Ai
 {
 public:
-	TemporaryAi(int nbTurns);
-	void update(Actor *owner);
+	TemporaryAi(Actor *owner, int nbTurns);
+	void update();
 	void applyTo(Actor *actor);
 
 	static TemporaryAi *create(TCODZip &zip);
@@ -75,15 +83,15 @@ protected:
 
 	enum TemporaryAiType
 	{
-		CONFUSED_MONSTER
+		ConfusedMonster
 	};
 };
 
 class ConfusedMonsterAi : public TemporaryAi
 {
 public:
-	ConfusedMonsterAi(int nbTurns);
-	void update(Actor *owner);
+	ConfusedMonsterAi(Actor *owner, int nbTurns);
+	void update();
 
 	void save(TCODZip &zip);
 	void load(TCODZip &zip);

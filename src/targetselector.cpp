@@ -8,22 +8,22 @@ TargetSelector::TargetSelector(TargetSelector::SelectorType type, float range) :
 
 }
 
-void TargetSelector::selectTargets(Actor *wearer, TCODList<Actor *> & list)
+void TargetSelector::selectTargets(TCODList<Actor *> & list)
 {
 	switch(type)
 	{
-		case CLOSEST_MONSTER:
+		case ClosestMonster:
 		{
-			Actor *closestMonster = engine.getClosestMonster(wearer->x, wearer->y, range);
+			Actor *closestMonster = engine.getClosestMonster(wearer->getX(), wearer->getY(), range);
 			if (closestMonster)
 				list.push(closestMonster);
 		}
 		break;
-		case SELECTED_MONSTER:
+		case SelectedMonster:
 		{
 			int x;
 			int y;
-			engine.gui->message(TCODColor::cyan, "Left-click to select an enemy,\nor right-click to cancel.");
+			engine.getGui()->message(TCODColor::cyan, "Left-click to select an enemy,\nor right-click to cancel.");
 			if (engine.pickATile(x, y, 0.0f, range))
 			{
 				Actor *actor = engine.getActor(x, y);
@@ -32,35 +32,35 @@ void TargetSelector::selectTargets(Actor *wearer, TCODList<Actor *> & list)
 			}
 		}
 		break;
-		case WEARER_RANGE:
+		case WearerRange:
 		{
-			for (Actor **i = engine.actors.begin();
-				i != engine.actors.end(); ++i)
+			for (Actor **i = engine.getActors().begin();
+				i != engine.getActors().end(); ++i)
 			{
 				Actor *actor = *i;
-				if (actor != wearer && actor->destructible && !actor->destructible->isDead()
-					&& actor->getDistance(wearer->x, wearer->y) <= range)
+				if (actor != wearer && actor->getDestructible() && !actor->getDestructible()->isDead()
+					&& actor->getDistanceTo(wearer->getX(), wearer->getY()) <= range)
 					list.push(actor);
 			}
 		}
 		break;
-		case SELECTED_RANGE:
+		case SelectedRange:
 		{
 			int x;
 			int y;
-			engine.gui->message(TCODColor::cyan, "Left-click to select an enemy,\nor right-click to cancel.");
+			engine.getGui()->message(TCODColor::cyan, "Left-click to select an enemy,\nor right-click to cancel.");
 			if (engine.pickATile(x, y, range))
-				for (Actor **i = engine.actors.begin();
-					i != engine.actors.end(); ++i)
+				for (Actor **i = engine.getActors().begin();
+					i != engine.getActors().end(); ++i)
 				{
 					Actor *actor = *i;
-					if (actor->destructible && !actor->destructible->isDead()
-						&& actor->getDistance(wearer->x, wearer->y) <= range)
+					if (actor->getDestructible() && !actor->getDestructible()->isDead()
+						&& actor->getDistanceTo(x, y) <= range)
 						list.push(actor);
 				}
 		}
 		break;
 	}
 	if (list.isEmpty())
-		engine.gui->message(TCODColor::lightGrey, "No enemy is close enough");
+		engine.getGui()->message(TCODColor::lightGrey, "No enemy is close enough");
 }

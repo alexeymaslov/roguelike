@@ -7,21 +7,25 @@ class Actor;
 
 class TargetSelector : public Persistent
 {
-public:
+public:	
 	enum SelectorType
 	{
-		CLOSEST_MONSTER,
-		SELECTED_MONSTER,
-		WEARER_RANGE,
-		SELECTED_RANGE
+		ClosestMonster,
+		SelectedMonster,
+		WearerRange,
+		SelectedRange
 	};
 	TargetSelector(SelectorType type, float range);
-	void selectTargets(Actor *wearer, TCODList<Actor *> & list);
+
+	void setWearer(Actor *wearer) { this->wearer = wearer; };
+	// Выбранные цели добавляются в список
+	void selectTargets(TCODList<Actor *> & list);
 
 	void load(TCODZip &zip);
 	void save(TCODZip &zip);
 	
 protected:
+	Actor *wearer;
 	SelectorType type;
 	float range;
 };

@@ -4,28 +4,40 @@
 #include "persistent.hpp"
 
 class Actor;
+class Container;
 
 class Equipment : public Persistent
 {
 public:
 	enum Slot
 	{
-		RIGHT_HAND, LEFT_HAND
-	} slot;
-	bool equipped;
+		RightHand, LeftHand
+	};
+	Equipment(Actor *owner, Slot slot, float powerBonus = 0, float defenseBonus = 0, float hpBonus = 0);
 
-	float powerBonus;
-	float defenseBonus;
-	float hpBonus;
+	Slot getSlot() { return slot; };
+	bool isEquipped() { return equipped; };
+	float getPowerBonus() { return powerBonus; };
+	float getDefenseBonus() { return defenseBonus; };
+	float getHpBonus() { return hpBonus; };
+	void setContainer(Container *container) { this->container = container; };
+	void eraseContainer() { this->container = nullptr; };
 
-	Equipment(Slot slot, float powerBonus = 0, float defenseBonus = 0, float hpBonus = 0);
-	void toggleEquip(Actor *owner, Actor *wearer);
-	void equip(Actor *owner, Actor *wearer);
-	void dequip(Actor *owner);
-	Actor *getEquippedInSlot(Equipment::Slot slot, Actor *wearer);
+	void toggleEquip();
+	void equip();
+	void dequip();
+	static Actor *getEquippedInSlot(Equipment::Slot slot, Container *container);
+	static const char *getSlotAsChar(Slot slot);
 
 	void load(TCODZip &zip);
 	void save(TCODZip &zip);
 
-	static const char *getSlotAsChar(Slot slot);
+private:
+	Actor *owner;
+	Container *container;
+	Slot slot;
+	bool equipped;
+	float powerBonus;
+	float defenseBonus;
+	float hpBonus;
 };

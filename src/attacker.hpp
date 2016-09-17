@@ -7,15 +7,16 @@ class Actor;
 class Attacker : public Persistent
 {
 public:
-	float basePower;
-	float power(Actor *owner) const;
-
-	Attacker(float basePower);
-	void attack(Actor *owner, Actor *target);
+	Attacker(Actor *owner, float basePower);
+	float power() const;
+	void addBasePower(float amount) { basePower += amount; };
+	void attack(Actor *target) const;
 
 	void save(TCODZip &zip);
 	void load(TCODZip &zip);
 
-protected:
-	float calculateBonusPower(Actor *owner) const;
+private:
+	Actor *owner;
+	float basePower;
+	float calculateBonusPower() const;
 };

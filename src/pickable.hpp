@@ -5,21 +5,28 @@
 #include "effect.hpp"
 
 class Actor;
+class Container;
 
 class Pickable : public Persistent
 {
 public:
-	Pickable(TargetSelector *selector = nullptr, Effect *effect = nullptr);
-	virtual ~Pickable();
+	Pickable(Actor *owner, TargetSelector *selector = nullptr, Effect *effect = nullptr);
+	~Pickable();
 
-	bool pick(Actor *owner, Actor *wearer);
-	void drop(Actor *owner, Actor *wearer);
-	virtual bool use(Actor *owner, Actor *wearer);
+	void setContainer(Container *container);
+	void eraseContainer() { this->container = nullptr; };
+
+	// Возвращает true, если удалось успешно добавить в container
+	bool pick(Actor *wearer);
+	void drop();
+	bool use();
 
 	void load(TCODZip &zip);
 	void save(TCODZip &zip);
 
-protected:
+private:
+	Actor *owner;
+	Container *container;
 	TargetSelector *selector;
 	Effect *effect;
 };

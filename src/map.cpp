@@ -7,8 +7,8 @@
 #include "ai.hpp"
 #include "engine.hpp"
 
-static const int ROOM_MAX_SIZE = 12;
-static const int ROOM_MIN_SIZE = 6;
+static const int RoomMaxSize = 12;
+static const int RoomMinSize = 6;
 
 class BspListener : public ITCODBspCallback
 {
@@ -19,7 +19,8 @@ public:
 private:
 	Map &map;
 	int roomNum;
-	int lastx; // center of the last room
+	// центр предыдущей комнаты для прокапывания тоннеля 
+	int lastx; 
 	int lasty;
 };
 
@@ -29,8 +30,8 @@ bool BspListener::visitNode(TCODBsp *node, void *userData)
 	{
 		bool withActors = (bool) userData;
 		// dig a room
-		int w = map.rng->getInt(ROOM_MIN_SIZE, node->w - 2);
-		int h = map.rng->getInt(ROOM_MIN_SIZE, node->h - 2);
+		int w = map.rng->getInt(RoomMinSize, node->w - 2);
+		int h = map.rng->getInt(RoomMinSize, node->h - 2);
 		int x = map.rng->getInt(node->x + 1, node->x + node->w - w - 1);
 		int y = map.rng->getInt(node->y + 1, node->y + node->h - h - 1);
 		
@@ -57,13 +58,15 @@ Map::Map(int width, int height) : width(width), height(height)
 void Map::init(bool withActors)
 {
 	
-	currentScentValue = SCENT_THRESHOLD;
+	currentScentValue = ScentThreshold;
 	rng = new TCODRandom(seed, TCOD_RNG_CMWC);
 	tiles = new Tile[width * height];
 	map = new TCODMap(width, height);
 	initItemOrMonsterChances();
 
-	if (engine.level % 2)
+	// Каждый четный уровень генерируется с помощью bsp
+	// а нечетный с помощию клеточного автомата
+	if (engine.getLevel() % 2 - 1)
 		bspGeneration(withActors);
 	else
 		cellularAutomataGeneration(withActors);
@@ -89,7 +92,7 @@ bool Map::isExplored(int x, int y) const
 void Map::bspGeneration(bool withActors)
 {
 	TCODBsp bsp(0, 0, width, height);
-	bsp.splitRecursive(rng, 8, ROOM_MAX_SIZE, ROOM_MAX_SIZE, 1.5f, 1.5f);
+	bsp.splitRecursive(rng, 8, RoomMaxSize, RoomMaxSize, 1.5f, 1.5f);
 	BspListener listener(*this);
 	bsp.traverseInvertedLevelOrder(&listener, (void *) withActors);
 }
@@ -110,18 +113,13 @@ void Map::createRoom(bool first, int x1, int y1, int x2, int y2, bool withActors
 
 	if (!withActors)
 		return;
-
+	// В первую комнату помещаем игрока
 	if (first)
-	{
-		// put the player in the first room
-		engine.player->x = (x1 + x2) / 2;
-		engine.player->y = (y1 + y2) / 2;
-	}
+		engine.getPlayer()->setCoords((x1 + x2) / 2, (y1 + y2) / 2);
 	else
 	{
-		engine.stairs->x = (x1 + x2) / 2;
-		engine.stairs->y = (y1 + y2) / 2;
-
+		engine.getStairs()->setCoords((x1 + x2) / 2, (y1 + y2) / 2);
+		// Размещаем монстров
 		TCODRandom *rng = TCODRandom::getInstance();
 		int nbMonsters = rng->getInt(0, maxAmountRoomMonsters);
 		while (nbMonsters > 0)
@@ -132,7 +130,7 @@ void Map::createRoom(bool first, int x1, int y1, int x2, int y2, bool withActors
 				addMonster(x, y);
 			--nbMonsters;
 		}
-
+		// Размещаем предметы
 		int nbItems = rng->getInt(0, maxAmountRoomItems);
 		while (nbItems > 0)
 		{
@@ -151,24 +149,24 @@ void Map::render() const
 	static const TCODColor darkGround = TCODColor::desaturatedHan;
 	static const TCODColor lightWall = TCODColor::darkestGreen;
 	static const TCODColor lightGround = TCODColor::desaturatedGreen;
-	for (int x = 0; x < engine.cameraWidth; ++x)
-		for (int y = 0; y < engine.cameraHeight; ++y)
+	for (int x = 0; x < engine.getCameraWidth(); ++x)
+		for (int y = 0; y < engine.getCameraHeight(); ++y)
 		{
-			int mapx = x + engine.camerax;
-			int mapy = y + engine.cameray;
+			int mapx = x + engine.getCamerax();
+			int mapy = y + engine.getCameray();
 			if (isInFov(mapx, mapy))
 				TCODConsole::root->setCharBackground(x, y, isWall(mapx, mapy) ? lightWall : lightGround);
 			else if (isExplored(mapx, mapy))
 				TCODConsole::root->setCharBackground(x, y, isWall(mapx, mapy) ? darkWall : darkGround);
 		}
 
-	// show scent value 
-	/*for (int x = 0; x < engine.cameraWidth; ++x)
-		for (int y = 0; y < engine.cameraHeight; ++y)
+	// Тут можно включить показ показателя scent на клетках
+	/*for (int x = 0; x < engine.cameraWidth(); ++x)
+		for (int y = 0; y < engine.cameraHeight(); ++y)
 		{
-			int mapx = x + engine.camerax;
-			int mapy = y + engine.cameray;
-			int scent = SCENT_THRESHOLD - (currentScentValue - getScent(mapx, mapy));
+			int mapx = x + engine.getCamerax();
+			int mapy = y + engine.getCameray();
+			int scent = ScentThreshold - (currentScentValue - getScent(mapx, mapy));
 			scent = CLAMP(0, 10, scent);
 			float sc = scent * 0.1f;
 			if (isInFov(mapx, mapy))
@@ -199,16 +197,16 @@ bool Map::isInFov(int x, int y) const
 // TODO при загрузке не учитывается старый scent
 void Map::computeFov()
 {
-	map->computeFov(engine.player->x, engine.player->y, engine.fovRadius);
+	map->computeFov(engine.getPlayer()->getX(), engine.getPlayer()->getY(), engine.getFovRadius());
 
-	// update scent
+	// обновляем scent
 	for (int x = 0; x < width; ++x)
 		for (int y = 0; y < height; ++y)
 			if (isInFov(x,y))
 			{
 				unsigned int oldScent = getScent(x, y);
-				int dx = x - engine.player->x;
-				int dy = y - engine.player->y;
+				int dx = x - engine.getPlayer()->getX();
+				int dy = y - engine.getPlayer()->getY();
 				int distance = (int)sqrt(dx * dx + dy * dy);
 				unsigned int newScent = currentScentValue - distance;
 				if (newScent > oldScent)
@@ -220,10 +218,10 @@ bool Map::canWalk(int x, int y) const
 {
 	if (isWall(x, y))
 		return false;
-	for (Actor **iterator = engine.actors.begin(); iterator != engine.actors.end(); ++iterator)
+	for (Actor **iterator = engine.getActors().begin(); iterator != engine.getActors().end(); ++iterator)
 	{
 		Actor *actor = *iterator;
-		if (actor->blocks && actor->x == x && actor->y == y)
+		if (actor->getBlocks() && actor->getX() == x && actor->getY() == y)
 			return false;
 	}
 	return true;
@@ -249,12 +247,12 @@ Map::GeneratedActorType Map::rollActorType(const std::vector<Pair<GeneratedActor
 	}
 }
 
-// Chance of monsters and item spawn depends on dungeon level
+// Шансы на появление монстра или предмета завясят от уровня
 // Pair <int chance, int level>
 int Map::getChance(const std::vector<Pair<int, int>> &pairs) const
 {
 	for (auto i = pairs.rbegin(); i != pairs.rend(); ++i)
-		if (engine.level >= i->second)
+		if (engine.getLevel() >= i->second)
 			return i->first;
 	return 0;
 }
@@ -269,16 +267,16 @@ void Map::initItemOrMonsterChances()
 	maxAmountRoomItems = getChance(maxItemsFromLevel);
 
 	static const std::vector<Pair<int, int>> trollChancesFromLevel = { {15, 3}, {30, 5}, {60, 7} };
-	monsterChances = { {ORC, 80}, {TROLL, getChance(trollChancesFromLevel)} };
+	monsterChances = { {Orc, 80}, {Troll, getChance(trollChancesFromLevel)} };
 
 	static const std::vector<Pair<int, int>> lightningBoltChancesFromLevel = { {25, 4} };
 	static const std::vector<Pair<int, int>> fireballChancesFromLevel = { {25, 6} };
 	static const std::vector<Pair<int, int>> confuserChancesFromLevel = { {10, 2} };
 	static const std::vector<Pair<int, int>> swordChancesFromLevel = { {5, 4} };
 	static const std::vector<Pair<int, int>> shieldChancesFromLevel = { {15, 8} };
-	itemChances = { {HEALER, 35}, {LIGHTNING_BOLT, getChance(lightningBoltChancesFromLevel)}, 
-		{FIREBALL, getChance(fireballChancesFromLevel) }, {CONFUSER, getChance(confuserChancesFromLevel)}, 
-		{SWORD, getChance(swordChancesFromLevel)}, {SHIELD, getChance(shieldChancesFromLevel)}};
+	itemChances = { {Healer, 35}, {LightningBolt, getChance(lightningBoltChancesFromLevel)}, 
+		{Fireball, getChance(fireballChancesFromLevel) }, {Confuser, getChance(confuserChancesFromLevel)}, 
+		{Sword, getChance(swordChancesFromLevel)}, {Shield, getChance(shieldChancesFromLevel)}};
 }
 
 void Map::addMonster(int x, int y)
@@ -286,22 +284,22 @@ void Map::addMonster(int x, int y)
 	GeneratedActorType type = rollActorType(monsterChances);
 	switch (type)
 	{
-		case ORC:
+		case Orc:
 		{
 			Actor *orc = new Actor(x, y, 'o', "orc", TCODColor::brass);
-			orc->destructible = new MonsterDestructible(10, 0, "dead orc", 20);
-			orc->attacker = new Attacker(3);
-			orc->ai = new MonsterAi();
-			engine.actors.push(orc);
+			orc->setDestructible(new MonsterDestructible(orc, 10, 0, "dead orc", 20));
+			orc->setAttacker(new Attacker(orc, 3));
+			orc->setAi(new MonsterAi(orc));
+			engine.getActors().push(orc);
 		}
 		break;
-		case TROLL:
+		case Troll:
 		{
 			Actor *troll = new Actor(x, y, 'T', "troll", TCODColor::darkerCrimson);
-			troll->destructible = new MonsterDestructible(16, 1, "troll carcass", 40);
-			troll->attacker = new Attacker(4);
-			troll->ai = new MonsterAi();
-			engine.actors.push(troll);
+			troll->setDestructible(new MonsterDestructible(troll, 16, 1, "troll carcass", 40));
+			troll->setAttacker(new Attacker(troll, 4));
+			troll->setAi(new MonsterAi(troll));
+			engine.getActors().push(troll);
 		}
 		break;
 		default:
@@ -314,67 +312,67 @@ void Map::addItem(int x, int y)
 	GeneratedActorType type = rollActorType(itemChances);
 	switch (type)
 	{
-		case HEALER:
+		case Healer:
 		{
 			Actor *healthPotion = new Actor(x, y, '!', "health potion",
 				TCODColor::lightLime);
-			healthPotion->blocks = false;
-			healthPotion->pickable = new Pickable(nullptr, 
-				new HealthEffect(4, "%s is healed for %g health"));
-			engine.actors.push(healthPotion);
+			healthPotion->setBlocks(false);
+			healthPotion->setPickable(new Pickable(healthPotion, nullptr, 
+				new HealthEffect(4, "%s is healed for %g health")));
+			engine.getActors().push(healthPotion);
 		}
 		break;
-		case LIGHTNING_BOLT:
+		case LightningBolt:
 		{
 			Actor *scrollOfLightningBolt = new Actor(x, y, '#', "scroll of lightning bolt",
 				TCODColor::gold);
-			scrollOfLightningBolt->blocks = false;
-			scrollOfLightningBolt->pickable = new Pickable(
-				new TargetSelector(TargetSelector::CLOSEST_MONSTER, 5), 
+			scrollOfLightningBolt->setBlocks(false);
+			scrollOfLightningBolt->setPickable(new Pickable(scrollOfLightningBolt,
+				new TargetSelector(TargetSelector::ClosestMonster, 5), 
 				new HealthEffect(-20, "A lighting bolt strikes the %s with a loud thunder!\n"
-				"The damage is %g hit points."));
-			engine.actors.push(scrollOfLightningBolt);
+				"The damage is %g hit points.")));
+			engine.getActors().push(scrollOfLightningBolt);
 		}
 		break;
-		case FIREBALL:
+		case Fireball:
 		{
 			Actor *scrollOfFireball = new Actor(x, y, '#', "scroll of fireball",
 				TCODColor::peach);
-			scrollOfFireball->blocks = false;
-			scrollOfFireball->pickable = new Pickable(
-				new TargetSelector(TargetSelector::SELECTED_RANGE, 3), 
-				new HealthEffect(-12, "The %s gets burned for %g hit points."));
-			engine.actors.push(scrollOfFireball);
+			scrollOfFireball->setBlocks(false);
+			scrollOfFireball->setPickable(new Pickable(scrollOfFireball,
+				new TargetSelector(TargetSelector::SelectedRange, 3), 
+				new HealthEffect(-12, "The %s gets burned for %g hit points.")));
+			engine.getActors().push(scrollOfFireball);
 		}
 		break;
-		case CONFUSER:
+		case Confuser:
 		{
 			Actor *scrollOfConfusion = new Actor(x, y, '#', "scroll of confusion",
 				TCODColor::celadon);
-			scrollOfConfusion->blocks = false;
-			scrollOfConfusion->pickable = new Pickable(
-				new TargetSelector(TargetSelector::SELECTED_MONSTER, 5), 
-				new AiChangeEffect(new ConfusedMonsterAi(10), 
-					"The eyes of the %s look vacant,\nas he starts to stumble around!"));
-			engine.actors.push(scrollOfConfusion);
+			scrollOfConfusion->setBlocks(false);
+			scrollOfConfusion->setPickable(new Pickable(scrollOfConfusion,
+				new TargetSelector(TargetSelector::SelectedMonster, 5), 
+				new AiChangeEffect(new ConfusedMonsterAi(nullptr, 10), 
+					"The eyes of the %s look vacant,\nas he starts to stumble around!")));
+			engine.getActors().push(scrollOfConfusion);
 		}
 		break;
-		case SWORD:
+		case Sword:
 		{
 			Actor *sword = new Actor(x, y, '/', "sword", TCODColor::sky);
-			sword->blocks = false;
-			sword->equipment = new Equipment(Equipment::RIGHT_HAND, 3);
-			sword->pickable = new Pickable();
-			engine.actors.push(sword);
+			sword->setBlocks(false);
+			sword->setEquipment(new Equipment(sword, Equipment::RightHand, 3));
+			sword->setPickable(new Pickable(sword));
+			engine.getActors().push(sword);
 		}
 		break;
-		case SHIELD:
+		case Shield:
 		{
 			Actor *shield = new Actor(x, y, '[', "shield",TCODColor::darkerOrange);
-			shield->blocks = false;
-			shield->equipment = new Equipment(Equipment::LEFT_HAND, 0, 1);
-			shield->pickable = new Pickable();
-			engine.actors.push(shield);
+			shield->setBlocks(false);
+			shield->setEquipment(new Equipment(shield, Equipment::LeftHand, 0, 1));
+			shield->setPickable(new Pickable(shield));
+			engine.getActors().push(shield);
 		}
 		break;
 		default:
@@ -409,8 +407,7 @@ void Map::cellularAutomataGeneration(bool withActors)
 			y = rng->getInt(1, height);
 		}
 		while (!map->isWalkable(x, y));
-		engine.player->x = x;
-		engine.player->y = y;
+		engine.getPlayer()->setCoords(x, y);
 
 		do
 		{
@@ -418,8 +415,7 @@ void Map::cellularAutomataGeneration(bool withActors)
 			y = rng->getInt(1, height);
 		}
 		while (!map->isWalkable(x, y));
-		engine.stairs->x = x;
-		engine.stairs->y = y;
+		engine.getStairs()->setCoords(x, y);
 
 		populateCaves();
 	}
@@ -502,7 +498,8 @@ bool Map::floodFill()
 
 	static const float WallThreshold = 55;
 	// 3 раза пытаемся найти подходящую точку для заливки
-	int counter = 3;
+	static const int nbTriesToFill = 3;
+	int counter = nbTriesToFill;
 	do
 	{
 		int x;
@@ -543,18 +540,18 @@ void Map::fill(int x, int y, bool *isWall)
 
 float Map::calcPercentOfWalls() const
 {
-	int nbWalls = 0;
+	float nbWalls = 0;
 	int nbCells = width * height;
 	for (int x = 0; x < width; ++x)
 		for (int y = 0; y < height; ++y)
 			if (!map->isWalkable(x, y))
 				++nbWalls;
-	return ((float)nbWalls) / nbCells;
+	return nbWalls / nbCells;
 }
 
 void Map::populateCaves()
 {
-	float averageRoomLength = ((float)(ROOM_MAX_SIZE + ROOM_MIN_SIZE) / 2) * 2 / 3;
+	float averageRoomLength = ((float)(RoomMaxSize + RoomMinSize) / 2) * 2 / 3;
 	float averageRoomSquare =  averageRoomLength * averageRoomLength;
 	// Сколько примерно комнат было бы сгенерировано с помощью bsp генерации
 	int nbRooms = (int) (width * height / averageRoomSquare) - 1;

@@ -5,45 +5,47 @@
 
 #include <stdio.h>
 
-Attacker::Attacker(float basePower) : basePower(basePower)
+Attacker::Attacker(Actor *owner, float basePower) : owner(owner), basePower(basePower)
 {
 
 }
-// TODO make same func for defense and hp
-float Attacker::calculateBonusPower(Actor *owner) const
+// TODO вынести подсчет бонуса для defense, hp и power в одну функцию
+float Attacker::calculateBonusPower() const
 {
-	if (owner != engine.player)
-		return 0;
-
 	float sum = 0;
-	auto &items = engine.player->container->inventory;
-	for (Actor **i = items.begin(); i != items.end(); ++i)
-		if ((*i)->equipment)
-			sum += (*i)->equipment->powerBonus;
+	Container *container = owner->getContainer();
+	if (container)
+		for (Actor **i = container->getInventory().begin(); i != container->getInventory().end(); ++i)
+		{
+			Equipment *equipment = (*i)->getEquipment();
+			if (equipment && equipment->isEquipped())
+				sum += equipment->getPowerBonus();
+		}
 
 	return sum;
 }
 
-float Attacker::power(Actor *owner) const
+float Attacker::power() const
 {
-	return basePower + calculateBonusPower(owner);
+	return basePower + calculateBonusPower();
 }
 
-void Attacker::attack(Actor *owner, Actor *target)
+void Attacker::attack(Actor *target) const
 {
-	if (target->destructible && !target->destructible->isDead())
+	Destructible *targetDestr = target->getDestructible();
+	if (targetDestr && !targetDestr->isDead())
 	{
-		if (power(owner) - target->destructible->defense(target) > 0)
-			engine.gui->message(owner == engine.player ? TCODColor::red : TCODColor::lightGrey,
-				"%s attacks %s for %g hit points.", owner->name, 
-				target->name, power(owner) - target->destructible->defense(target));
+		float damage = power() - targetDestr->getDefense();
+		if (damage > 0)
+			engine.getGui()->message(owner == engine.getPlayer() ? TCODColor::red : TCODColor::lightGrey,
+				"%s attacks %s for %g hit points.", owner->getName(), target->getName(), damage);
 		else
-			engine.gui->message(TCODColor::lightGrey,
-				"%s attacks %s but it has no effect!", owner->name, target->name);
-		target->destructible->takeDamage(target, power(owner));
+			engine.getGui()->message(TCODColor::lightGrey,
+				"%s attacks %s but it has no effect!", owner->getName(), target->getName());
+		targetDestr->takeDamage(power());
 	}
 	else
-		engine.gui->message(TCODColor::lightGrey,
-				"%s attacks %s in vain.", owner->name, target->name);
+		engine.getGui()->message(TCODColor::lightGrey,
+				"%s attacks %s in vain.", owner->getName(), target->getName());
 }
 

@@ -3,32 +3,32 @@
 #include "libtcod.hpp"
 #include "persistent.hpp"
 
-static const int PANEL_HEIGHT = 7;
+static const int PanelHeight = 7;
 
 class Menu
 {
 public:
 	enum MenuItemCode
 	{
-		NONE,
-		NEW_GAME,
-		CONTINUE,
-		EXIT,
-		CONSTITUTION,
-		STRENGTH,
-		AGILITY
+		None,
+		NewGame,
+		Continue,
+		Exit,
+		Constitution,
+		Strength,
+		Agility
 	};
 
 	enum DisplayMode
 	{
-		MAIN,
-		PAUSE
+		Main,
+		Pause
 	};
 
 	~Menu();
 	void clear();
 	void addItem(MenuItemCode code, const char *label);
-	MenuItemCode pick(DisplayMode mode = MAIN);
+	MenuItemCode pick(DisplayMode mode = Main);
 
 protected:
 	struct MenuItem
@@ -42,11 +42,12 @@ protected:
 class Gui : public Persistent
 {
 public:
-	Menu menu;
+	Menu &getMenu() { return menu; };
 
 	Gui();
 	~Gui();
 	void render();
+	// Работает как сишный printf
 	void message(const TCODColor &col, const char *text, ...);
 	void clear();
 
@@ -54,10 +55,12 @@ public:
 	void save(TCODZip &zip);
 
 protected:
+	Menu menu;
 	TCODConsole *con;
 	void renderBar(int x, int y, int width, const char *name,
 		float value, float maxValue, const TCODColor &barColor,
 		const TCODColor &backColor);
+	void renderLog();
 	void renderMouseLook();
 
 	struct Message

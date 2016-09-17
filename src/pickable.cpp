@@ -3,8 +3,8 @@
 #include "actor.hpp"
 #include "engine.hpp"
 
-Pickable::Pickable(TargetSelector *selector,  Effect *effect) :
-	selector(selector), effect(effect)
+Pickable::Pickable(Actor *owner, TargetSelector *selector,  Effect *effect) :
+	owner(owner), selector(selector), effect(effect), container(nullptr)
 {
 
 }
@@ -15,46 +15,60 @@ Pickable::~Pickable()
 	if (effect) delete effect;
 }
 
-bool Pickable::pick(Actor *owner, Actor *wearer)
+void Pickable::setContainer(Container *container)
 {
-	if (wearer->container && wearer->container->add(owner))
-	{
-		if (owner->equipment && !owner->equipment->getEquippedInSlot(owner->equipment->slot, wearer))
-			owner->equipment->equip(owner, wearer);
+	this->container = container;
+	if (selector)
+		selector->setWearer(container->getOwner());
+}
 
-		engine.actors.remove(owner);
+bool Pickable::pick(Actor *wearer)
+{
+	container = wearer->getContainer();
+	if (container && container->add(owner))
+	{
+		Equipment *equipment = owner->getEquipment();
+		if (equipment)
+			equipment->setContainer(container);
+
+		engine.getActors().remove(owner);
 		return true;
 	}
 	return false;
 }
 
-void Pickable::drop(Actor *owner, Actor *wearer)
+void Pickable::drop()
 {
-	if (wearer->container)
+	if (container)
 	{
-		if (owner->equipment)
-			owner->equipment->dequip(owner);
+		Equipment *equipment = owner->getEquipment();
+		if (equipment)
+		{
+			equipment->dequip();
+			equipment->eraseContainer();
+		}
 
-		wearer->container->remove(owner);
-		engine.actors.push(owner);
-		owner->x = wearer->x;
-		owner->y = wearer->y;
-		engine.gui->message(TCODColor::lightGrey, "%s drops a %s.",
-			wearer->name, owner->name);
+		container->remove(owner);
+		engine.getActors().push(owner);
+		Actor *wearer = container->getOwner();
+		owner->setCoords(wearer->getX(), wearer->getY());
+		engine.getGui()->message(TCODColor::lightGrey, "%s drops a %s.",
+			wearer->getName(), owner->getName());
 	}
 }
 
-bool Pickable::use(Actor *owner, Actor *wearer)
+bool Pickable::use()
 {
-	if (owner->equipment)
+	Equipment *equipment = owner->getEquipment();
+	if (equipment)
 	{
-		owner->equipment->toggleEquip(owner, wearer);
+		equipment->toggleEquip();
 		return true;
 	}
-	
+	Actor *wearer = container->getOwner();
 	TCODList<Actor *> list;
 	if (selector)
-		selector->selectTargets(wearer, list);
+		selector->selectTargets(list);
 	else
 		list.push(wearer);
 	bool succeed = false;
@@ -64,9 +78,9 @@ bool Pickable::use(Actor *owner, Actor *wearer)
 
 
 	if (succeed)
-		if (wearer->container)
+		if (wearer->getContainer())
 		{
-			wearer->container->remove(owner);
+			wearer->getContainer()->remove(owner);
 			delete owner;
 		}
 	return succeed;

@@ -3,15 +3,15 @@
 #include "engine.hpp"
 
 Engine::Engine(int screenWidth, int screenHeight) :
-	Engine(screenWidth, screenHeight, screenWidth, screenHeight - PANEL_HEIGHT)
+	Engine(screenWidth, screenHeight, screenWidth, screenHeight - PanelHeight)
 {
 
 }
 
 Engine::Engine(int screenWidth, int screenHeight, int mapWidth, int mapHeight) : 
-	gameStatus(STARTUP), player(nullptr), map(nullptr), fovRadius(10), 
+	gameStatus(StartUp), player(nullptr), map(nullptr), fovRadius(10), 
 	level(1), screenWidth(screenWidth), screenHeight(screenHeight),
-	cameraWidth(screenWidth), cameraHeight(screenHeight - PANEL_HEIGHT),
+	cameraWidth(screenWidth), cameraHeight(screenHeight - PanelHeight),
 	mapWidth(mapWidth), mapHeight(mapHeight)
 {
 	TCODConsole::initRoot(screenWidth, screenHeight, "", false);
@@ -23,53 +23,29 @@ Engine::Engine(int screenWidth, int screenHeight, int mapWidth, int mapHeight) :
 void Engine::init()
 {
 	player = new Actor(0, 0, '@', "player", TCODColor::white);
-	player->destructible = new PlayerDestructible(30, 2, "your cadaver");
-	player->attacker = new Attacker(2);
-	player->ai = new PlayerAi();
-	player->container = new Container(26);
+	player->setDestructible(new PlayerDestructible(player, 30, 2, "your cadaver"));
+	player->setAttacker(new Attacker(player, 2));
+	player->setAi(new PlayerAi(player));
+	player->setContainer(new Container(player, 26));
 
 	Actor *dagger = new Actor(0, 0, '-', "dagger",TCODColor::sky);
-	dagger->blocks = false;
-	dagger->equipment = new Equipment(Equipment::RIGHT_HAND, 2);
-	dagger->pickable = new Pickable();
-	player->container->add(dagger);
-	dagger->equipment->equip(dagger, player);
-	// TODO убрать отсюда
-	Actor *scrollOfLightningBolt = new Actor(0, 0, '#', "scroll of lightning bolt",
-		TCODColor::gold);
-	scrollOfLightningBolt->blocks = false;
-	scrollOfLightningBolt->pickable = new Pickable(
-		new TargetSelector(TargetSelector::CLOSEST_MONSTER, 5), 
-		new HealthEffect(-20, "A lighting bolt strikes the %s with a loud thunder!\n"
-		"The damage is %g hit points."));
-	Actor *scrollOfFireball = new Actor(0, 0, '#', "scroll of fireball",
-		TCODColor::peach);
-	scrollOfFireball->blocks = false;
-	scrollOfFireball->pickable = new Pickable(
-		new TargetSelector(TargetSelector::SELECTED_RANGE, 3), 
-		new HealthEffect(-12, "The %s gets burned for %g hit points."));
-	Actor *scrollOfConfusion = new Actor(0, 0, '#', "scroll of confusion",
-		TCODColor::celadon);
-	scrollOfConfusion->blocks = false;
-	scrollOfConfusion->pickable = new Pickable(
-		new TargetSelector(TargetSelector::SELECTED_MONSTER, 5), 
-		new AiChangeEffect(new ConfusedMonsterAi(10), 
-			"The eyes of the %s look vacant,\nas he starts to stumble around!"));
-	player->container->add(scrollOfLightningBolt);
-	player->container->add(scrollOfFireball);
-	player->container->add(scrollOfConfusion);
+	dagger->setBlocks(false);
+	dagger->setEquipment(new Equipment(dagger, Equipment::RightHand, 2));
+	dagger->setPickable(new Pickable(dagger));
+	player->getContainer()->add(dagger);
+	dagger->getEquipment()->equip();
 
 	actors.push(player);
 	stairs = new Actor(0, 0, '>', "stairs", TCODColor::white);
-	stairs->blocks = false;
-	stairs->fovOnly = false;
+	stairs->setBlocks(false);
+	stairs->setFovOnly(false);
 	actors.push(stairs);
 
 	map = new Map(mapWidth, mapHeight);
 	map->init(true);
 	gui->message(TCODColor::red, 
 		"Welcome to the dungeon, traveller!");
-	gameStatus = STARTUP;
+	gameStatus = StartUp;
 }
 
 void Engine::term()
@@ -86,8 +62,8 @@ Engine::~Engine()
 }
 void Engine::update()
 {
-	if (gameStatus == STARTUP) map->computeFov();
-	gameStatus = IDLE;
+	if (gameStatus == StartUp) map->computeFov();
+	gameStatus = Idle;
 
 	TCODSystem::checkForEvent(TCOD_EVENT_KEY_PRESS | TCOD_EVENT_MOUSE, &lastKey, &mouse);
 	if (lastKey.vk == TCODK_ESCAPE)
@@ -97,9 +73,9 @@ void Engine::update()
 	}
 	player->update();
 
-	if (gameStatus == NEW_TURN)
+	if (gameStatus == NewTurn)
 	{
-		map->currentScentValue++;
+		map->incCurrentScentValue();
 		for (Actor **iterator = actors.begin(); iterator != actors.end(); ++iterator)
 		{
 			Actor *actor = *iterator;
@@ -111,7 +87,7 @@ void Engine::update()
 
 void Engine::render()
 {
-	moveCamera(player->x, player->y);
+	moveCamera(player->getX(), player->getY());
 
 	TCODConsole::root->clear();
 	// draw the map
@@ -121,8 +97,8 @@ void Engine::render()
 	{
 		Actor *actor = *iterator;
 		if (actor != player 
-			&& ((!actor->fovOnly && map->isExplored(actor->x, actor->y)) 
-				|| map->isInFov(actor->x, actor->y)))
+			&& ((!actor->isFovOnly() && map->isExplored(actor->getX(), actor->getY())) 
+				|| map->isInFov(actor->getX(), actor->getY())))
 			actor->render();
 	}
 
@@ -143,9 +119,9 @@ Actor *Engine::getClosestMonster(int x, int y, float range) const
 	for (Actor **it = actors.begin(); it != actors.end(); ++it)
 	{
 		Actor *actor = *it;
-		if (actor != player && actor->destructible && !actor->destructible->isDead())
+		if (actor != player && actor->getDestructible() && !actor->getDestructible()->isDead())
 		{
-			float distance = actor->getDistance(x, y);
+			float distance = actor->getDistanceTo(x, y);
 			if (distance < bestDistance && (distance <= range || range == 0.0f))
 			{
 				bestDistance = distance;
@@ -162,10 +138,10 @@ bool Engine::pickATile(int &x, int &y, float radius, float maxRange)
 	{
 		render();
 
-		for (int cx = 0; cx < map->width; ++cx)
-			for (int cy = 0; cy < map->height; ++cy)
+		for (int cx = 0; cx < map->getWidth(); ++cx)
+			for (int cy = 0; cy < map->getHeight(); ++cy)
 				if (map->isInFov(cx, cy)
-				 && (maxRange == 0 || player->getDistance(cx, cy) <= maxRange))
+				 && (maxRange == 0 || player->getDistanceTo(cx, cy) <= maxRange))
 				{
 					TCODColor col = TCODConsole::root->getCharBackground(cx - camerax, cy - cameray);
 					col = col * 1.2f;
@@ -175,11 +151,11 @@ bool Engine::pickATile(int &x, int &y, float radius, float maxRange)
 		TCODSystem::checkForEvent(TCOD_EVENT_KEY_PRESS|TCOD_EVENT_MOUSE,&lastKey,&mouse);
 		int mapx = mouse.cx + camerax;
 		int mapy = mouse.cy + cameray;
-		if (mouse.cy < engine.cameraHeight && map->isInFov(mapx, mapy)
-			&& (maxRange == 0 || player->getDistance(mapx, mapy) <= maxRange))
+		if (mouse.cy < cameraHeight && map->isInFov(mapx, mapy)
+			&& (maxRange == 0 || player->getDistanceTo(mapx, mapy) <= maxRange))
 		{
-			for (int cx = 0; cx < map->width; ++cx)
-				for (int cy = 0; cy < map->height; ++cy)
+			for (int cx = 0; cx < map->getWidth(); ++cx)
+				for (int cy = 0; cy < map->getHeight(); ++cy)
 					if (getDistance(mapx, mapy, cx, cy) <= radius)
 						TCODConsole::root->setCharBackground(cx - camerax, cy - cameray, TCODColor::white);
 
@@ -207,8 +183,8 @@ Actor *Engine::getActor(int x, int y) const
 	for (Actor **it = actors.begin(); it != actors.end(); ++it)
 	{
 		Actor *actor = *it;
-		if (actor->x == x && actor->y == y && actor->destructible
-			&& !actor->destructible->isDead())
+		if (actor->getX() == x && actor->getY() == y && actor->getDestructible()
+			&& !actor->getDestructible()->isDead())
 			return actor;
 	}
 	return nullptr;
@@ -218,7 +194,7 @@ void Engine::nextLevel()
 {
 	++level;
 	gui->message(TCODColor::lightViolet,"You take a moment to rest, and recover your strength.");
-	player->destructible->heal(player->destructible->maxHp(player) / 2, player);
+	player->getDestructible()->heal(player->getDestructible()->maxHp() / 2);
 	gui->message(TCODColor::red,"You descend deeper into the heart of the dungeon...");
 
 	delete map;
@@ -231,7 +207,7 @@ void Engine::nextLevel()
 
 	map = new Map(mapWidth, mapHeight);
 	map->init(true);
-	gameStatus = STARTUP;
+	gameStatus = StartUp;
 }
 
 void Engine::moveCamera(int x, int y)
@@ -240,8 +216,8 @@ void Engine::moveCamera(int x, int y)
 	int cx = x - cameraWidth / 2;
 	int cy = y - cameraHeight / 2;
 
-	if (cx > map->width - cameraWidth) cx = map->width - cameraWidth;
-	if (cy > map->height - cameraHeight) cy = map->height - cameraHeight;
+	if (cx > map->getWidth() - cameraWidth) cx = map->getWidth() - cameraWidth;
+	if (cy > map->getHeight() - cameraHeight) cy = map->getHeight() - cameraHeight;
 	if (cx < 0) cx = 0;
 	if (cy < 0) cy = 0;
 

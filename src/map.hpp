@@ -16,30 +16,25 @@ struct Tile
 class Map : public Persistent
 {
 public :
-	int width;
-	int height;
-
 	Map(int width, int height);
 	~Map();
 
-	bool isWall(int x, int y) const;
-	void render() const;
-
+	int getWidth() const { return width; };
+	int getHeight() const { return height; };
+	const TCODMap *getMap() { return map; };
+	int getCurrentScentValue() const { return currentScentValue; };
+	void incCurrentScentValue() { currentScentValue++; };
 	bool isInFov(int x, int y) const;
 	bool isExplored(int x, int y) const;
-	void computeFov();
-
 	bool canWalk(int x, int y) const;
-	void addMonster(int x, int y);
-	void addItem(int x, int y);
-
-	unsigned int currentScentValue;
 	unsigned int getScent(int x, int y) const;
 
-	const TCODMap *getMap() const { return map; }
-	
+	bool isWall(int x, int y) const;
+	void render() const;
+	void computeFov();
+	// withActors -- нужно ли заодно создавать объекты на карте, или они загружаются из файла
 	void init(bool withActors);
-
+	
 	void load(TCODZip &zip);
 	void save(TCODZip &zip); 
 
@@ -48,17 +43,24 @@ protected :
 	TCODMap *map;
 	long seed;
 	TCODRandom *rng;
+	int width;
+	int height;
+	unsigned int currentScentValue;
 
+	void addMonster(int x, int y);
+	void addItem(int x, int y);
+
+	// TODO заменить на std::pair
 	template<typename T1, typename T2>
 	struct Pair
 	{
 		T1 first;
 		T2 second;
 	};
-
+	// TODO убрать всё это в фабрику
 	enum GeneratedActorType
 	{
-		ORC, TROLL, HEALER, LIGHTNING_BOLT, FIREBALL, CONFUSER, SWORD, SHIELD
+		Orc, Troll, Healer, LightningBolt, Fireball, Confuser, Sword, Shield
 	};
 
 	int maxAmountRoomMonsters;
@@ -66,11 +68,13 @@ protected :
 	std::vector<Pair<GeneratedActorType, int>> monsterChances;
 	std::vector<Pair<GeneratedActorType, int>> itemChances;
 
+	// Нужно для использования TCODBsp
 	friend class BspListener;
 
+	// выкапывает прямоугольную область
 	void dig(int x1, int y1, int x2, int y2);
 	void createRoom(bool first, int x1, int y1, int x2, int y2, bool withActors);
-
+	// TODO заменить на std::pair, а лучше рассмотреть замену на std::map
 	GeneratedActorType rollActorType(const std::vector<Pair<GeneratedActorType, int>> &v) const;
 	int getChance(const std::vector<Pair<int, int>> &v) const;
 	void initItemOrMonsterChances();

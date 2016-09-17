@@ -7,42 +7,53 @@ class Actor;
 class Destructible : public Persistent
 {
 public:
-	float baseMaxHp;
-	float hp;
-	float baseDefense;
-	char *corpseName;
-	int xp;
-
-
-	float defense(Actor *owner) const;
-	float maxHp(Actor *owner) const;
-
-	Destructible(float baseMaxHp, float baseDefense, const char *corpseName, int xp);
+	Destructible(Actor *owner, float baseMaxHp, float baseDefense, const char *corpseName, int xp);
 	virtual ~Destructible();
-	inline bool isDead() {return hp <= 0;}
-	float takeDamage(Actor *owner, float damage);
-	virtual void die(Actor *owner);
-	float heal(float amount, Actor *owner);
+
+	void setOwner(Actor *owner) { this->owner = owner; };
+	void addXp(int xp) { this->xp += xp; };
+	void addMaxHp(int hp);
+	void addBaseDefense(float amount) { baseDefense += amount; };
+
+	float getDefense() const;
+	float getHp() const { return hp; };
+	float maxHp() const;
+	int getXp() const { return xp; };
+
+	inline bool isDead() const { return hp <= 0; };
+	// Возвращает полученный урон
+	float takeDamage(float damage);
+	// Возвращает полученное лечение
+	float heal(float amount);
 
 	void load(TCODZip &zip);
 	void save(TCODZip &zip);
 	static Destructible *create(TCODZip &zip);
 
 protected:
+	// Используем при сохранении
 	enum DestructibleType
 	{
-		MONSTER, PLAYER
+		Monster, Player
 	};
+	Actor *owner;
+	float baseMaxHp;
+	float hp;
+	float baseDefense;
+	char *corpseName;
+	int xp;
 
-	float calculateBonusDefense(Actor *owner) const;
-	float calculateBonusHp(Actor *owner) const;
+	// Меняет некоторые параметры owner
+	virtual void die();
+	float calculateBonusDefense() const;
+	float calculateBonusHp() const;
 };
 
 class MonsterDestructible : public Destructible
 {
 public:
-	MonsterDestructible(float maxHp, float defense, const char *corpseName, int xp);
-	void die(Actor *owner);
+	MonsterDestructible(Actor *owner, float maxHp, float defense, const char *corpseName, int xp);
+	void die();
 
 	void save(TCODZip &zip);
 };
@@ -50,8 +61,8 @@ public:
 class PlayerDestructible : public Destructible
 {
 public:
-	PlayerDestructible(float maxHp, float defense, const char *corpseName);
-	void die(Actor *owner);
+	PlayerDestructible(Actor *owner, float maxHp, float defense, const char *corpseName);
+	void die();
 
 	void save(TCODZip &zip);
 };

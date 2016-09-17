@@ -10,24 +10,27 @@ HealthEffect::HealthEffect(float amount, const char *message) :
 
 bool HealthEffect::applyTo(Actor *actor)
 {
-	if (!actor->destructible) return false;
+	Destructible *destructible = actor->getDestructible();
+	if (!destructible) return false;
 
 	if (amount > 0)
 	{
-		float healed = actor->destructible->heal(amount, actor);
+		float healed = destructible->heal(amount);
 		if (healed > 0)
 		{
 			if (message)
-				engine.gui->message(TCODColor::lightGrey, message, actor->name, healed);
+				engine.getGui()->message(TCODColor::lightGrey, message, actor->getName(), healed);
 			return true;
 		}
 	}
 	else
 	{
-		if (message && -amount - actor->destructible->defense(actor) > 0)
-			engine.gui->message(TCODColor::lightGrey, message, actor->name,
-				-amount - actor->destructible->defense(actor));
-		if (actor->destructible->takeDamage(actor, -amount) > 0)
+		// TODO вроде бы считаем лишнее, переделать
+		float damage = -amount - destructible->getDefense();
+		if (message &&  damage > 0)
+			engine.getGui()->message(TCODColor::lightGrey, message, actor->getName(),
+				damage);
+		if (destructible->takeDamage(-amount) > 0)
 			return true;
 	}
 	return false;
@@ -43,6 +46,6 @@ bool AiChangeEffect::applyTo(Actor *actor)
 {
 	newAi->applyTo(actor);
 	if (message)
-		engine.gui->message(TCODColor::lightGrey, message, actor->name);
+		engine.getGui()->message(TCODColor::lightGrey, message, actor->getName());
 	return true;
 }

@@ -4,8 +4,8 @@
 #include "engine.hpp"
 
 
-Actor::Actor(int x, int y, int ch, const char *name, const TCODColor &col) :
-	x(x), y(y), ch(ch), col(col), name(name), blocks(true), fovOnly(true), 
+Actor::Actor(int x, int y, int ch, const char *name, const TCODColor &color) :
+	x(x), y(y), ch(ch), color(color), name(name), blocks(true), fovOnly(true), 
 	attacker(nullptr), destructible(nullptr), ai(nullptr), pickable(nullptr), container(nullptr),
 	equipment(nullptr)
 {
@@ -26,20 +26,21 @@ void Actor::render() const
 {
 	int cx;
 	int cy;
+	// TODO пусть возвращает лучше пару
 	engine.toCameraCoords(x, y, cx, cy);
 	if (cx != -1)
 	{
 		TCODConsole::root->setChar(cx, cy, ch);
-		TCODConsole::root->setCharForeground(cx, cy, col);
+		TCODConsole::root->setCharForeground(cx, cy, color);
 	}
 }
 
 void Actor::update()
 {
-	if (ai) ai->update(this);
+	if (ai) ai->update();
 }
 
-float Actor::getDistance(int cx, int cy) const
+float Actor::getDistanceTo(int cx, int cy) const
 {
 	int dx = cx - x;
 	int dy = cy - y;

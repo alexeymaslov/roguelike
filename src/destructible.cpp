@@ -5,8 +5,8 @@
 #include "actor.hpp"
 #include "engine.hpp"
 
-Destructible::Destructible(float maxHp, float defense, const char *corpseName, int xp) :
-	baseMaxHp(maxHp), hp(maxHp), baseDefense(defense), xp(xp)
+Destructible::Destructible(Actor *owner, float maxHp, float defense, const char *corpseName, int xp) :
+	owner(owner), baseMaxHp(maxHp), hp(maxHp), baseDefense(defense), xp(xp)
 {
 	if (corpseName) this->corpseName = strdup(corpseName);
 }
@@ -16,100 +16,114 @@ Destructible::~Destructible()
 	free(corpseName);
 }
 
-float Destructible::takeDamage(Actor *owner, float damage)
+float Destructible::takeDamage(float damage)
 {
-	damage -= defense(owner);
+	damage -= getDefense();
 	if (damage > 0)
 	{
 		hp -= damage;
 		if (hp <= 0)
-			die(owner);
+			die();
 	}
 	else
 		damage = 0;
 	return damage;
 }
 
-void Destructible::die(Actor *owner)
+void Destructible::die()
 {
-	owner->ch = '%';
-	owner->col = TCODColor::darkRed;
-	owner->name = corpseName;
-	owner->blocks = false;
+	owner->setCh('%');
+	owner->setColor(TCODColor::darkRed);
+	owner->setName(corpseName);
+	owner->setBlocks(false);
+	// Нужно, чтобы на клетке отрисовывался находящийся там живой объект, а не труп
 	engine.sendToBack(owner);
 }
 
-float Destructible::maxHp(Actor *owner) const
+float Destructible::maxHp() const
 {
-	return baseMaxHp + calculateBonusHp(owner);
+	return baseMaxHp + calculateBonusHp();
 }
 
-float Destructible::defense(Actor *owner) const
+void Destructible::addMaxHp(int hp)
 {
-	return baseDefense + calculateBonusDefense(owner);
+	baseMaxHp += hp;
+	this->hp += hp;
 }
 
-float Destructible::calculateBonusDefense(Actor *owner) const
+float Destructible::getDefense() const
 {
-	if (owner != engine.player)
-		return 0;
+	return baseDefense + calculateBonusDefense();
+}
 
+// TODO вынести подсчет бонуса для defense, hp и power в одну функцию
+float Destructible::calculateBonusDefense() const
+{
 	float sum = 0;
-	auto &items = engine.player->container->inventory;
-	for (Actor **i = items.begin(); i != items.end(); ++i)
-		if ((*i)->equipment)
-			sum += (*i)->equipment->defenseBonus;
+	Container *container = owner->getContainer();
+	if (container)
+		for (Actor **i = container->getInventory().begin(); i != container->getInventory().end(); ++i)
+		{
+			Equipment *equipment = (*i)->getEquipment();
+			if (equipment && equipment->isEquipped())
+				sum += equipment->getDefenseBonus();
+		}
 
 	return sum;
 }
 
-float Destructible::calculateBonusHp(Actor *owner) const
+// TODO вынести подсчет бонуса для defense, hp и power в одну функцию
+float Destructible::calculateBonusHp() const
 {
-	if (owner != engine.player)
-		return 0;
-
 	float sum = 0;
-	auto &items = engine.player->container->inventory;
-	for (Actor **i = items.begin(); i != items.end(); ++i)
-		if ((*i)->equipment)
-			sum += (*i)->equipment->hpBonus;
+	Container *container = owner->getContainer();
+	if (container)
+		for (Actor **i = container->getInventory().begin(); i != container->getInventory().end(); ++i)
+		{
+			Equipment *equipment = (*i)->getEquipment();
+			if (equipment && equipment->isEquipped())
+				sum += equipment->getHpBonus();
+		}
 
 	return sum;
 }
 
-float Destructible::heal(float amount, Actor *owner)
+float Destructible::heal(float amount)
 {
 	hp += amount;
-	if (hp > maxHp(owner))
+	float maxHp = this->maxHp();
+	if (hp > maxHp)
 	{
-		amount -= hp - maxHp(owner);
-		hp = maxHp(owner);
+		amount = amount - (hp - maxHp);
+		hp = maxHp;
 	}
 	return amount;
 }
 
-PlayerDestructible::PlayerDestructible(float maxHp, float defense, const char *corpseName) :
-	Destructible(maxHp, defense, corpseName, 0)
+PlayerDestructible::PlayerDestructible(Actor *owner, float maxHp, float defense, const char *corpseName) :
+	Destructible(owner, maxHp, defense, corpseName, 0)
 {
 
 }
 
-MonsterDestructible::MonsterDestructible(float maxHp, float defense, const char *corpseName, int xp) :
-	Destructible(maxHp, defense, corpseName, xp)
+MonsterDestructible::MonsterDestructible(Actor *owner, float maxHp, float defense, 
+	const char *corpseName, int xp) :
+	Destructible(owner, maxHp, defense, corpseName, xp)
 {
 	
 }
 
-void MonsterDestructible::die(Actor *owner)
+void MonsterDestructible::die()
 {
-	engine.gui->message(TCODColor::lightGrey, "%s is dead. You gain %d xp", owner->name, xp);
-	engine.player->destructible->xp += xp;
-	Destructible::die(owner);
+	engine.getGui()->message(TCODColor::lightGrey, "%s is dead. You gain %d xp", owner->getName(), xp);
+	// TODO добавить в параметр убийцу, чтобы передавать ему опыт
+	engine.getPlayer()->getDestructible()->addXp(xp);
+	Destructible::die();
 }
 
-void PlayerDestructible::die(Actor *owner)
+void PlayerDestructible::die()
 {
-	engine.gui->message(TCODColor::red, "You died!");
-	Destructible::die(owner);
-	engine.gameStatus = Engine::DEFEAT;
+	engine.getGui()->message(TCODColor::red, "You died!");
+	Destructible::die();
+	engine.setGameStatus(Engine::Defeat);
 }

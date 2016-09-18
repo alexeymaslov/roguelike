@@ -43,6 +43,8 @@ public :
 	void render();
 
 	void toCameraCoords(int x, int y, int &rx, int &ry);
+	// Отправляет actor в начало списка, чтобы он отрисовывался раньше
+	// на экране в данной клетке отрисовывается самый последний в списке
 	void sendToBack(Actor *actor);
 	Actor *getClosestMonster(int x, int y, float range) const;
 
